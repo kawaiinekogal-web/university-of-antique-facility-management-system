@@ -7,6 +7,8 @@ use App\Models\Facility;
 use App\Models\FormSubmission;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class BookingService
 {
@@ -64,8 +66,11 @@ class BookingService
         $lastDay = !empty($payload['date_end']) ? $payload['date_end'] : $dateActivity;
         $startDay = Carbon::parse($dateActivity)->startOfDay();
         $endDay = Carbon::parse($lastDay)->startOfDay();
-        if ($endDay->lt($startDay) || $startDay->diffInDays($endDay) > 13) {
+        if ($endDay->lt($startDay)) {
             return 'The end date of the event is before its start date.';
+        }
+        if ($startDay->diffInDays($endDay) > 13) {
+            return 'Events can span at most 14 days.';
         }
 
         $slots = [];
@@ -85,7 +90,7 @@ class BookingService
             return 'Requester account not found.';
         }
 
-        $baseCode  = 'BKG-' . now()->format('YmdHis') . '-' . $facilityIds[0];
+        $baseCode  = 'BKG-' . now()->format('YmdHis') . '-' . $facilityIds[0] . '-' . Str::upper(Str::random(6));
         $dayCount  = count($slots);
 
         $booking = DB::transaction(function () use ($slots, $dayCount, $baseCode, $requester, $submission, $payload, $facilityIds) {
@@ -170,16 +175,95 @@ class BookingService
     {
         $startDateTime = Carbon::parse($data['date_activity'] . ' ' . $data['start_time']);
         $endDateTime   = Carbon::parse($data['date_activity'] . ' ' . $data['end_time']);
-        $facilityIds   = $data['facility_ids'];
+        if ($startDateTime->lt(now())) {
+            throw ValidationException::withMessages(['date_activity' => 'A direct reservation cannot start in the past.']);
+        }
 
-        // 1. Find and update conflicting bookings
-        $conflictingBookings = Booking::overlapping($facilityIds, $startDateTime, $endDateTime)->get();
+        $facilityIds = array_values(array_unique(array_map('intval', $data['facility_ids'])));
+        $bookingCode = 'BKG-' . now()->format('YmdHis') . '-' . head($facilityIds) . '-' . Str::upper(Str::random(6));
+        [$booking, $conflictingBookings] = DB::transaction(function () use ($facilityIds, $startDateTime, $endDateTime, $data, $adminId, $bookingCode) {
+            $facilities = Facility::whereIn('id', $facilityIds)->orderBy('id')->lockForUpdate()->get();
+            if ($facilities->count() !== count($facilityIds)) {
+                throw ValidationException::withMessages(['facility_ids' => 'One or more selected facilities could not be found.']);
+            }
+
+            $unavailable = $facilities->first(fn (Facility $facility) => ! $facility->isAvailable());
+            if ($unavailable) {
+                throw ValidationException::withMessages(['facility_ids' => $unavailable->name . ' is not currently available.']);
+            }
+
+            $conflictingBookings = Booking::overlapping($facilityIds, $startDateTime, $endDateTime)
+                ->with('requester')
+                ->lockForUpdate()
+                ->get();
+            foreach ($conflictingBookings as $conflictingBooking) {
+                $conflictingBooking->status = 'pending';
+                $conflictingBooking->save();
+            }
+            $preemptedSubmissionIds = $conflictingBookings
+                ->map(fn (Booking $conflict) => $conflict->additional_details['form_submission_id'] ?? null)
+                ->filter()
+                ->unique()
+                ->values();
+            if ($preemptedSubmissionIds->isNotEmpty()) {
+                FormSubmission::whereIn('id', $preemptedSubmissionIds)
+                    ->where('status', 'reserved')
+                    ->update(['status' => 'pending']);
+            }
+
+            $equipment = $this->buildEquipmentArray($data);
+            $booking = Booking::create([
+                'requester_id'       => $adminId,
+                'start_time'         => $startDateTime,
+                'end_time'           => $endDateTime,
+                'requester_type'     => 'admin',
+                'requester_unit'     => 'GSU Office',
+                'status'             => 'reserved',
+                'request_method'     => 'direct_admin',
+                'purpose'            => $data['purpose'],
+                'additional_details' => [
+                    'equipment' => $equipment,
+                    'requester_name' => $data['requester_name'],
+                ],
+                'requested_at'       => now(),
+                'approved_at'        => now(),
+                'booking_code'       => $bookingCode,
+            ]);
+            $booking->facilities()->sync($facilityIds);
+
+            $submission = FormSubmission::create([
+                'type'           => 'facilities_utilization',
+                'requester_id'   => $adminId,
+                'requester_type' => 'admin',
+                'requester_unit' => 'GSU Office',
+                'status'         => 'reserved',
+                'payload'        => [
+                    'control_no'      => $bookingCode,
+                    'date_request'    => now()->toDateString(),
+                    'requester_name'  => $data['requester_name'],
+                    'client_name'     => $data['requester_name'],
+                    'contact_number'  => $data['requester_contact'] ?? null,
+                    'date_activity'   => $data['date_activity'],
+                    'time_range'      => ['start' => $data['start_time'], 'end' => $data['end_time']],
+                    'facility_id'     => head($facilityIds),
+                    'facility_ids'    => $facilityIds,
+                    'facility_names'  => $facilities->pluck('name')->all(),
+                    'purpose'         => $data['purpose'],
+                    'equipment'       => $equipment,
+                    'approved_datetime' => now()->format('M d, Y h:i A'),
+                    'is_direct_booking' => true,
+                ],
+            ]);
+
+            $details = $booking->additional_details ?? [];
+            $details['form_submission_id'] = $submission->id;
+            $booking->additional_details = $details;
+            $booking->save();
+
+            return [$booking, $conflictingBookings];
+        });
 
         foreach ($conflictingBookings as $conflictingBooking) {
-            $conflictingBooking->status = 'pending';
-            $conflictingBooking->save();
-
-            // 2. Notify the original requester that their booking was preempted
             if ($conflictingBooking->requester) {
                 $this->notifications->notifyBookingPreempted(
                     $conflictingBooking->requester_id,
@@ -188,51 +272,6 @@ class BookingService
                 );
             }
         }
-
-        // 3. Create the new high-priority booking
-        $booking = Booking::create([
-            'requester_id'       => $adminId,
-            'start_time'         => $startDateTime,
-            'end_time'           => $endDateTime,
-            'requester_type'     => 'admin',
-            'requester_unit'     => 'GSU Office',
-            'status'             => 'reserved',
-            'request_method'     => 'direct_admin',
-            'purpose'            => $data['purpose'],
-            'additional_details' => [
-                'equipment' => $this->buildEquipmentArray($data),
-                'requester_name' => $data['requester_name'],
-            ],
-            'requested_at'       => now(),
-            'approved_at'        => now(),
-            'booking_code'       => 'BKG-' . now()->format('YmdHis') . '-' . head($facilityIds),
-        ]);
-
-        $booking->facilities()->sync($facilityIds);
-
-        // 4. Create a corresponding FormSubmission for record-keeping
-        FormSubmission::create([
-            'type'           => 'facilities_utilization',
-            'requester_id'   => $adminId,
-            'requester_type' => 'admin',
-            'requester_unit' => 'GSU Office',
-            'status'         => 'reserved',
-            'payload'        => [
-                'control_no'      => 'BKG-' . now()->format('YmdHis') . '-' . head($facilityIds),
-                'date_request'    => now()->toDateString(),
-                'requester_name'  => $data['requester_name'],
-                'date_activity'   => $data['date_activity'],
-                'time_range'      => [
-                    'start' => $data['start_time'],
-                    'end'   => $data['end_time'],
-                ],
-                'facility_id'     => head($facilityIds), // For simplicity, log the first facility
-                'purpose'         => $data['purpose'],
-                'equipment'       => $this->buildEquipmentArray($data),
-                'approved_datetime' => now()->format('M d, Y h:i A'),
-                'is_direct_booking' => true,
-            ],
-        ]);
 
         return $booking;
     }

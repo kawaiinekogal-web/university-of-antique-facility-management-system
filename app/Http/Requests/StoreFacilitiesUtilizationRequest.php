@@ -81,7 +81,7 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
             // Receipt and supporting documents
             'payment_attachment' => [
                 'nullable',
-                Rule::requiredIf(fn () => $this->routeIs('public.request.store', 'guest.requests.facilities.store')),
+                Rule::prohibitedIf(fn () => $this->routeIs('public.request.store')),
                 'file',
                 'mimes:jpg,jpeg,png,pdf',
                 'mimetypes:image/jpeg,image/png,application/pdf',

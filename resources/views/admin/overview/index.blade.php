@@ -30,8 +30,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
                 </a>
             </div>
-            <p class="pk-hero-sub">Number of reserved/rescheduled reservations this month per facility
-                (custom college / org facilities are grouped under "OTHERS").</p>
+            <p class="pk-hero-sub">Reservations this month by facility, including completed bookings and every venue in a multi-facility reservation.</p>
         </div>
     </section>
 
@@ -40,7 +39,7 @@
             <div>
                 <p class="pk-stat-label">Reservations</p>
                 <p class="pk-stat-value">{{ $total }}</p>
-                <p class="pk-stat-hint">Reserved or rescheduled</p>
+                <p class="pk-stat-hint">Reserved, rescheduled, or completed</p>
             </div>
             <span class="pk-stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-6"/></svg></span>
         </div>

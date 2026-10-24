@@ -4,6 +4,7 @@ namespace App\Http\Controllers\College;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\ManagesUnitUsers;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
 class UserController extends Controller
@@ -22,7 +23,27 @@ class UserController extends Controller
 
     protected function headTitle(): string
     {
-        return 'Dean';
+        return 'College Admin';
+    }
+
+    protected function isHead(User $user, ?int $primaryId = null): bool
+    {
+        return $user->isCollegeStaff() && $user->id === ($primaryId ?? $this->primaryId());
+    }
+
+    protected function nameRules(): array
+    {
+        return [
+            'required',
+            'string',
+            'max:255',
+            function ($attribute, $value, $fail) {
+                $parts = preg_split('/\s+/u', trim((string) $value), -1, PREG_SPLIT_NO_EMPTY);
+                if (count($parts) < 2) {
+                    $fail('Enter the user\'s full name, including at least a first and last name.');
+                }
+            },
+        ];
     }
 
     protected function scopeToUnit(Builder $query): Builder

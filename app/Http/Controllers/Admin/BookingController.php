@@ -9,14 +9,18 @@ use App\Models\Facility;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use App\Services\BookingService;
+use App\Services\GuestRequestEmailService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
     use GroupsBookingsByDay;
     public function __construct(
         protected BookingService $bookingService,
-        protected \App\Services\NotificationService $notificationService
+        protected \App\Services\NotificationService $notificationService,
+        protected GuestRequestEmailService $guestRequestEmails
     ) {}
 
     public function index(Request $request)
@@ -79,9 +83,9 @@ class BookingController extends Controller
     public function storeDirect(Request $request)
     {
         $data = $request->validate([
-            'facility_ids'   => 'required|array',
-            'facility_ids.*' => 'exists:facilities,id',
-            'date_activity' => 'required|date',
+            'facility_ids'   => 'required|array|min:1',
+            'facility_ids.*' => 'required|distinct|exists:facilities,id',
+            'date_activity' => 'required|date|after_or_equal:today',
             'start_time'    => 'required|date_format:H:i',
             'end_time'      => 'required|date_format:H:i|after:start_time',
             'purpose'       => 'required|string|max:500',
@@ -117,10 +121,7 @@ class BookingController extends Controller
      */
     public function calendar(Request $request)
     {
-        $month = $request->query('month');
-        $current = $month
-            ? Carbon::createFromFormat('Y-m', $month)->startOfMonth()
-            : now()->startOfMonth();
+        $current = $this->resolveMonth($request);
 
         $start = $current->copy()->startOfMonth();
         $end   = $current->copy()->endOfMonth();
@@ -176,38 +177,17 @@ class BookingController extends Controller
      */
     public function overview(Request $request)
     {
-        $month = $request->query('month');
-        $current = $month
-            ? Carbon::createFromFormat('Y-m', $month)->startOfMonth()
-            : now()->startOfMonth();
+        $current = $this->resolveMonth($request);
 
         $start = $current->copy()->startOfMonth();
         $end   = $current->copy()->endOfMonth();
 
         $bookings = Booking::with('facilities')
             ->whereBetween('start_time', [$start, $end])
-            ->whereIn('status', ['reserved', 'rescheduled'])
+            ->whereIn('status', ['reserved', 'rescheduled', 'completed'])
             ->get();
 
-        // Core facilities (seeded UA core list)
-        $coreNames = [
-            'BUSALIAN HALL',
-            'PAGHIUSA HALL',
-            'E-HUB',
-            'BALAY NI JUAN',
-            'ICT AVR',
-            'CEA AVR',
-            'CBA AVR',
-            'NEW AVR',
-            'GRAND STAND',
-            'COVERED GYM',
-            'TRACK OVAL',
-        ];
-
-        $series = [];
-        foreach ($coreNames as $name) {
-            $series[$name] = 0;
-        }
+        $series = Facility::orderBy('name')->pluck('name')->mapWithKeys(fn ($name) => [$name => 0])->all();
         $series['OTHERS'] = 0;
 
         foreach ($bookings as $booking) {
@@ -216,13 +196,12 @@ class BookingController extends Controller
                 continue;
             }
 
-            // For simplicity, we'll categorize based on the first facility
-            $facilityName = strtoupper($booking->facilities->first()->name ?? 'UNKNOWN');
-
-            if (in_array($facilityName, $coreNames, true)) {
-                $series[$facilityName]++;
-            } else {
-                $series['OTHERS']++;
+            foreach ($booking->facilities as $facility) {
+                if (array_key_exists($facility->name, $series)) {
+                    $series[$facility->name]++;
+                } else {
+                    $series['OTHERS']++;
+                }
             }
         }
 
@@ -241,8 +220,8 @@ class BookingController extends Controller
     {
         $data = $request->validate([
             'facility_ids'   => 'required|array',
-            'facility_ids.*' => 'exists:facilities,id',
-            'date_activity' => 'required|date',
+            'facility_ids.*' => 'required|distinct|exists:facilities,id',
+            'date_activity' => 'required|date|after_or_equal:today',
             'start_time'    => 'required|date_format:H:i',
             'end_time'      => 'required|date_format:H:i|after:start_time',
             'purpose'       => 'required|string|max:500',
@@ -261,12 +240,12 @@ class BookingController extends Controller
         $startDateTime = Carbon::parse($data['date_activity'].' '.$data['start_time']);
         $endDateTime   = Carbon::parse($data['date_activity'].' '.$data['end_time']);
 
+        if ($startDateTime->lessThan(now())) {
+            return back()->withErrors(['date_activity' => 'A booking cannot be rescheduled to a time in the past.'])->withInput();
+        }
         if ($endDateTime->lessThanOrEqualTo($startDateTime)) {
             return back()->withErrors(['End time must be after start time.']);
         }
-
-        // Admin can override conflicts, but we still prevent obviously insane overlaps
-        // with itself; we skip other bookings on purpose because GSU has priority.
 
         // Merge / update additional_details (always treat as array)
         $existingDetails = is_array($booking->additional_details)
@@ -291,14 +270,41 @@ class BookingController extends Controller
             'rescheduled_by'  => auth()->user()->name ?? 'GSU Admin',
         ]);
 
-        // Persist booking changes
-        $booking->facilities()->sync($data['facility_ids']);
-        $booking->start_time  = $startDateTime;
-        $booking->end_time    = $endDateTime;
-        $booking->purpose     = $data['purpose'];
-        $booking->status      = 'rescheduled';
-        $booking->additional_details = $updatedDetails;
-        $booking->save();
+        DB::transaction(function () use ($booking, $data, $startDateTime, $endDateTime, $updatedDetails) {
+            $facilities = Facility::whereIn('id', $data['facility_ids'])
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+            if ($facilities->count() !== count(array_unique($data['facility_ids']))) {
+                throw ValidationException::withMessages(['facility_ids' => 'One or more selected facilities could not be found.']);
+            }
+
+            $unavailable = $facilities->first(fn (Facility $facility) => ! $facility->isAvailable());
+            if ($unavailable) {
+                throw ValidationException::withMessages(['facility_ids' => $unavailable->name . ' is not currently available.']);
+            }
+
+            $conflict = Booking::overlapping($data['facility_ids'], $startDateTime, $endDateTime)
+                ->where('bookings.id', '<>', $booking->id)
+                ->lockForUpdate()
+                ->first();
+            if ($conflict) {
+                throw ValidationException::withMessages([
+                    'facility_ids' => 'The selected facility and time overlap booking ' . $conflict->booking_code . '. Choose a different time or venue.',
+                ]);
+            }
+
+            $booking->facilities()->sync($data['facility_ids']);
+            $booking->start_time = $startDateTime;
+            $booking->end_time = $endDateTime;
+            $booking->purpose = $data['purpose'];
+            $booking->status = 'rescheduled';
+            $booking->additional_details = $updatedDetails;
+            $booking->save();
+        });
+        $this->guestRequestEmails->sendBookingUpdate($booking, 'rescheduled', [
+            'reason' => $data['reason'],
+        ]);
 
         // Notify requester and other admins
         if ($booking->requester) {
@@ -344,6 +350,9 @@ class BookingController extends Controller
 
         $booking->additional_details = $details; // array; cast will JSON it
         $booking->save();
+        $this->guestRequestEmails->sendBookingUpdate($booking, 'cancelled', [
+            'reason' => $data['reason'],
+        ]);
 
         if ($booking->requester) {
             $this->notificationService->notifyBookingCancelled(

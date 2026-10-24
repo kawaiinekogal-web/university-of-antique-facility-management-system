@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Traits\SubmitsFacilitiesForm;
 use App\Http\Requests\StoreFacilitiesUtilizationRequest;
+use App\Mail\GuestRequestTrackingNumber;
 use App\Models\Facility;
 use App\Models\FormSubmission;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Facility requests from guests (outsiders) without an account.
@@ -47,7 +50,8 @@ class PublicFacilityRequestController extends Controller
             'email'                  => 'required|email|max:160',
             'address'                => 'required|string|max:255',
             'organization'           => 'required|string|max:160',
-            'noted_signatory_custom' => 'required|string|max:255',
+            'noted_signatory_id'     => 'required|in:custom',
+            'noted_signatory_custom' => 'required_if:noted_signatory_id,custom|string|max:255',
         ]);
 
         $walkIn = User::firstOrCreate(
@@ -76,6 +80,7 @@ class PublicFacilityRequestController extends Controller
         $payload['email']                = $guest['email'];
         $payload['address']              = $guest['address'];
         $payload['organization']         = $guest['organization'];
+        $payload['noted_signatory_id']   = $guest['noted_signatory_id'];
         $payload['noted_signatory_name'] = $guest['noted_signatory_custom'];
         $payload['noted_datetime']       = now()->format('Y-m-d H:i:s');
         $submission->payload        = $payload;
@@ -84,6 +89,24 @@ class PublicFacilityRequestController extends Controller
 
         // Only this visitor may open the ticket page for this request
         session()->push('public_ticket_ids', $submission->id);
+
+        $trackingCode = 'FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-'
+            . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT);
+        $lastName = collect(preg_split('/\s+/', trim($guest['client_name'])))->last() ?? '';
+        $emailSent = false;
+
+        try {
+            Mail::to($guest['email'])->send(new GuestRequestTrackingNumber(
+                $guest['client_name'],
+                $trackingCode,
+                $lastName
+            ));
+            $emailSent = true;
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        session()->flash('tracking_email_sent', $emailSent);
 
         return redirect()->route('public.request.submitted', $submission);
     }

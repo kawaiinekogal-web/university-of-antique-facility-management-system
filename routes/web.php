@@ -53,6 +53,15 @@ Route::get('/forms/facilities/{submission}/attachments/{index}', [\App\Http\Cont
     ->whereNumber('index')
     ->middleware('throttle:30,1')
     ->name('payment-attachments.show');
+
+// Guest PDF Generation (only accessible after approval via tracking code)
+Route::get('/guest/forms/facilities/{submission}/pdf', [\App\Http\Controllers\Guest\FacilitiesFormPdfController::class, 'generate'])
+    ->middleware(['signed:relative', 'throttle:10,1'])
+    ->name('guest.forms.facilities.pdf');
+Route::post('/track/ticket/{submission}/payment', [\App\Http\Controllers\TicketLookupController::class, 'uploadPayment'])
+    ->middleware(['signed:relative', 'throttle:5,1'])
+    ->name('ticket.payment.upload');
+
 Route::view('/venue-rates', 'public.rates')->name('public.rates');
 Route::view('/guest-access', 'public.guest-access')->name('public.guest');
 
@@ -129,6 +138,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     // Monthly Records
     Route::get('/admin/monthly-records', [AdminMonthlyRecordsController::class, 'index'])->name('admin.monthly-records.index');
+    Route::get('/admin/monthly-records/export', [AdminMonthlyRecordsController::class, 'exportCharts'])->name('admin.monthly-records.export');
 
     // Direct booking (GSU high-priority)
     Route::get('/admin/bookings/create-direct', [\App\Http\Controllers\Admin\BookingController::class, 'createDirect'])
@@ -142,7 +152,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         ->name('admin.bookings.index');
     Route::get('/admin/bookings/{booking}/edit', [\App\Http\Controllers\Admin\BookingController::class, 'edit'])
         ->name('admin.bookings.edit');
-    Route::post('/admin/bookings/{booking}', [\App\Http\Controllers\Admin\BookingController::class, 'update'])
+    Route::put('/admin/bookings/{booking}', [\App\Http\Controllers\Admin\BookingController::class, 'update'])
         ->name('admin.bookings.update');
     Route::post('/admin/bookings/{booking}/cancel', [\App\Http\Controllers\Admin\BookingController::class, 'cancel'])
         ->name('admin.bookings.cancel');

@@ -8,23 +8,28 @@ use App\Models\Facility;
 use App\Models\FormSubmission;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MonthlyRecordsController extends Controller
 {
+    private const REPORTABLE_BOOKING_STATUSES = ['reserved', 'rescheduled', 'completed'];
+
     public function index(Request $request)
     {
-        // Get month and year from request or default to current month
-        $month = $request->input('month', now()->month);
-        $year = $request->input('year', now()->year);
+        $month = filter_var($request->query('month', now()->month), FILTER_VALIDATE_INT);
+        $year = filter_var($request->query('year', now()->year), FILTER_VALIDATE_INT);
+        $month = $month !== false && $month >= 1 && $month <= 12 ? $month : now()->month;
+        $year = $year !== false && $year >= 2000 && $year <= 2100 ? $year : now()->year;
 
         // Create date range for the selected month
         $startDate = Carbon::create($year, $month, 1)->startOfDay();
         $endDate = $startDate->copy()->endOfMonth();
 
-        // Get all bookings (reserved status) for the month
+        $venueRates = $this->venueRates();
+
         $bookings = Booking::with(['facilities', 'requester'])
             ->whereBetween('start_time', [$startDate, $endDate])
-            ->where('status', 'reserved')
+            ->whereIn('status', self::REPORTABLE_BOOKING_STATUSES)
             ->orderBy('start_time', 'asc')
             ->get();
 
@@ -37,7 +42,7 @@ class MonthlyRecordsController extends Controller
         $formSubmissions = FormSubmission::whereIn('id', $submissionIds)->get()->keyBy('id');
 
         // Format bookings for display
-        $records = $bookings->map(function ($booking) use ($formSubmissions) {
+        $records = $bookings->map(function ($booking) use ($formSubmissions, $venueRates) {
             $facilities = $booking->facilities;
             $details = $booking->additional_details ?? [];
             $formSubmission = $formSubmissions->get($details['form_submission_id'] ?? null);
@@ -50,7 +55,7 @@ class MonthlyRecordsController extends Controller
                 'time' => $booking->start_time->format('g:ia') . '-' . $booking->end_time->format('g:ia'),
                 'purpose' => $booking->purpose ?? '-',
                 'requester' => $payload['client_name'] ?? $booking->requester->name ?? '-',
-                'contact_no' => $booking->requester->contact_number ?? '-',
+                'contact_no' => $payload['contact_number'] ?? $booking->requester?->contact_number ?? '-',
                 'venue' => $facilities->isNotEmpty() ? $facilities->pluck('name')->join(', ') : '-',
                 'equipment' => [
                     'chairs' => $equipment['monobloc_chair'] ?? $payload['qty_monobloc'] ?? 0,
@@ -61,7 +66,7 @@ class MonthlyRecordsController extends Controller
                     'sound' => $equipment['sound'] ?? $payload['qty_sound'] ?? 0,
                     'led' => $equipment['led'] ?? $payload['qty_led'] ?? 0,
                 ],
-                'rental_fee' => $facilities->sum(fn ($facility) => $facility->rental_fee ?? 0),
+                'rental_fee' => $facilities->sum(fn ($facility) => $venueRates[$this->normalizeName($facility->name)] ?? 0),
             ];
         });
 
@@ -82,20 +87,24 @@ class MonthlyRecordsController extends Controller
         // Calculate total rental fees
         $totalRentalFees = $records->sum('rental_fee');
 
-        // Get monthly trend data (last 12 months)
+        $trendStart = now()->subMonths(11)->startOfMonth();
+        $trendEnd = now()->endOfMonth();
+        $trendCounts = Booking::query()
+            ->selectRaw('YEAR(start_time) as report_year, MONTH(start_time) as report_month, COUNT(*) as booking_count')
+            ->whereBetween('start_time', [$trendStart, $trendEnd])
+            ->whereIn('status', self::REPORTABLE_BOOKING_STATUSES)
+            ->groupByRaw('YEAR(start_time), MONTH(start_time)')
+            ->get()
+            ->keyBy(fn ($row) => sprintf('%04d-%02d', $row->report_year, $row->report_month));
+
         $monthlyTrend = [];
         for ($i = 11; $i >= 0; $i--) {
             $trendMonth = now()->subMonths($i);
-            $count = Booking::whereBetween('start_time', [
-                $trendMonth->copy()->startOfMonth(),
-                $trendMonth->copy()->endOfMonth()
-            ])
-            ->where('status', 'reserved')
-            ->count();
+            $key = $trendMonth->format('Y-m');
 
             $monthlyTrend[] = [
                 'month' => $trendMonth->format('M Y'),
-                'count' => $count
+                'count' => (int) ($trendCounts->get($key)->booking_count ?? 0),
             ];
         }
 
@@ -108,5 +117,74 @@ class MonthlyRecordsController extends Controller
             'year',
             'monthlyTrend'
         ));
+    }
+
+    public function exportCharts(Request $request): StreamedResponse
+    {
+        $filters = $request->validate([
+            'month' => ['required', 'integer', 'between:1,12'],
+            'year' => ['required', 'integer', 'between:2024,2030'],
+        ]);
+        $month = (int) $filters['month'];
+        $year = (int) $filters['year'];
+
+        $startDate = Carbon::create($year, $month, 1)->startOfDay();
+        $endDate = $startDate->copy()->endOfMonth();
+        $venueSummary = Booking::with('facilities')
+            ->whereBetween('start_time', [$startDate, $endDate])
+            ->whereIn('status', self::REPORTABLE_BOOKING_STATUSES)
+            ->get()
+            ->flatMap(fn ($booking) => $booking->facilities->pluck('name'))
+            ->countBy()
+            ->sortKeys();
+
+        $monthlyTrend = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $trendMonth = now()->subMonths($i);
+            $monthlyTrend[] = [
+                'label' => $trendMonth->format('M Y'),
+                'count' => Booking::whereBetween('start_time', [
+                    $trendMonth->copy()->startOfMonth(),
+                    $trendMonth->copy()->endOfMonth(),
+                ])->whereIn('status', self::REPORTABLE_BOOKING_STATUSES)->count(),
+            ];
+        }
+
+        return response()->streamDownload(function () use ($monthlyTrend, $venueSummary, $startDate) {
+            $output = fopen('php://output', 'w');
+            fwrite($output, "\xEF\xBB\xBF");
+            fputcsv($output, ['Chart', 'Category', 'Bookings']);
+
+            foreach ($monthlyTrend as $point) {
+                fputcsv($output, ['Booking Trend (last 12 months)', $point['label'], $point['count']]);
+            }
+            foreach ($venueSummary as $venue => $count) {
+                fputcsv($output, ['Facility Usage (' . $startDate->format('F Y') . ')', $venue, $count]);
+            }
+
+            fclose($output);
+        }, sprintf('monthly-graphs-%04d-%02d.csv', $startDate->year, $startDate->month), [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    private function venueRates(): array
+    {
+        return collect(include resource_path('views/public/venue-rates.php'))
+            ->mapWithKeys(function (array $venue) {
+                preg_match('/PhP\s*([\d,.]+)/i', $venue['rate'], $matches);
+
+                return [
+                    $this->normalizeName($venue['name']) => isset($matches[1])
+                        ? (float) str_replace(',', '', $matches[1])
+                        : 0,
+                ];
+            })
+            ->all();
+    }
+
+    private function normalizeName(string $name): string
+    {
+        return preg_replace('/[^a-z0-9]+/', ' ', strtolower(trim($name)));
     }
 }

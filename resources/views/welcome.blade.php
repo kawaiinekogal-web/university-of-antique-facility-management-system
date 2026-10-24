@@ -251,6 +251,16 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
     <div class="ua-tr-body">
       <dl class="ua-tr-details" id="ua-tr-details"></dl>
+      <div class="ua-tr-documents" id="ua-tr-documents" hidden>
+        <a class="ua-tr-primary" id="ua-tr-pdf" href="#" hidden>Open approved application PDF</a>
+        <form id="ua-tr-payment-form" method="post" enctype="multipart/form-data" hidden>
+          <input type="hidden" name="_token" value="{{ csrf_token() }}">
+          <label for="ua-tr-payment-file">Payment receipt (JPG, PNG, or PDF, max 10 MB)</label>
+          <input type="file" id="ua-tr-payment-file" name="payment_attachment" accept=".jpg,.jpeg,.png,.pdf" required>
+          <button class="ua-tr-primary" type="submit">Submit receipt</button>
+        </form>
+        <p id="ua-tr-payment-message" role="status" hidden></p>
+      </div>
       <div class="ua-tr-actions">
         <button type="button" class="ua-tr-secondary" data-close autofocus>Search again</button>
         <a href="#calendar" class="ua-tr-primary" data-close data-kind="FM">View calendar</a>
@@ -294,9 +304,9 @@ document.addEventListener('DOMContentLoaded', function () {
       states: {
         pending:     { title: 'Waiting for review', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'Your request was received and is waiting for GSU review.' },
         pending_payment: { title: 'Payment being verified', label: 'Pending payment', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'GSU is checking your payment receipt before reviewing the request.' },
-        reserved:    { title: 'Venue reserved', label: 'Reserved', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'check', msg: 'Your venue is reserved and on the calendar. See you there!' },
+        reserved:    { title: 'Request approved', label: 'Approved', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'GSU approved your request. Submit the payment receipt below to continue.' },
         disapproved: { title: 'Request not approved', label: 'Disapproved', tone: '#B91C1C', bg: '#FEF2F2', icon: 'x', msg: 'GSU did not approve this request. Sign in to your portal for details, or contact the GSU office.' },
-        approved:    { title: 'Approved by GSU', label: 'Approved', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'Good news — your request was approved. GSU will confirm the final reservation on the calendar.' },
+        approved:    { title: 'Request approved', label: 'Approved', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'GSU approved your request. Submit the payment receipt below to continue.' },
         ongoing:     { title: 'In progress', label: 'Ongoing', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'play', msg: 'Your request is approved and being processed for your schedule.' },
         rescheduled: { title: 'Moved to a new schedule', label: 'Rescheduled', tone: '#4338CA', bg: '#EEF2FF', icon: 'swap', msg: 'Your booking was moved to a new date or time. Check the details below.' },
         cancelled:   { title: 'Request cancelled', label: 'Cancelled', tone: '#475569', bg: '#F1F5F9', icon: 'x', msg: 'This request was cancelled. Submit a new request if you still need the venue.' }
@@ -315,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   };
 
-  // Shows the pop-up. result: { kind?: 'FM'|'RM', status, code, venue?, date?, time?, subject?, sent? }
+  // Shows the pop-up. result includes signed document actions when a facility request is approved.
   window.uaShowTicketResult = function (result) {
     const kind = kinds[result.kind] ? result.kind : typeSelect.value;
     const isStatus = !!kinds[kind].states[result.status];
@@ -328,10 +338,19 @@ document.addEventListener('DOMContentLoaded', function () {
     $('ua-tr-status').textContent = isStatus ? s.title : s.label;
     $('ua-tr-pill').textContent = s.label;
     $('ua-tr-pill').hidden = !isStatus;
-    $('ua-tr-msg').textContent = s.msg;
+    let message = s.msg;
+    const approvedStatus = ['approved', 'reserved', 'rescheduled'].includes(result.status);
+    if (kind === 'FM' && approvedStatus && result.payment_status === 'pending_payment') {
+      message = 'Your request is approved. Submit your payment receipt below using this ticket.';
+    } else if (kind === 'FM' && approvedStatus && result.payment_status === 'payment_uploaded') {
+      message = 'Your request is approved. GSU is verifying your payment receipt.';
+    } else if (kind === 'FM' && approvedStatus && result.payment_status === 'payment_verified') {
+      message = 'Your request and payment are approved. Open the completed application PDF below.';
+    }
+    $('ua-tr-msg').textContent = message;
     const rows = (kind === 'RM'
       ? [['Facility', result.venue], ['Subject', result.subject], ['Sent', result.sent]]
-      : [['Venue', result.venue], ['Date', result.date], ['Time', result.time]]).filter(r => r[1]);
+      : [['Venue', result.venue], ['Date', result.date], ['Time', result.time], ['Payment', result.payment_status && result.payment_status.replaceAll('_', ' ')] ]).filter(r => r[1]);
     dialog.querySelectorAll('.ua-tr-actions [data-kind]').forEach(el => { el.hidden = el.dataset.kind !== kind; });
     const dl = $('ua-tr-details');
     dl.innerHTML = '';
@@ -342,8 +361,40 @@ document.addEventListener('DOMContentLoaded', function () {
       div.append(dt, dd); dl.append(div);
     });
     dl.hidden = rows.length === 0;
+    const documents = $('ua-tr-documents');
+    const pdf = $('ua-tr-pdf');
+    const paymentForm = $('ua-tr-payment-form');
+    const paymentMessage = $('ua-tr-payment-message');
+    pdf.hidden = !(kind === 'FM' && result.can_download_pdf && result.pdf_url);
+    if (!pdf.hidden) pdf.href = result.pdf_url;
+    paymentForm.hidden = !(kind === 'FM' && result.can_upload_payment && result.payment_upload_url);
+    if (!paymentForm.hidden) paymentForm.action = result.payment_upload_url;
+    paymentMessage.hidden = true;
+    documents.hidden = pdf.hidden && paymentForm.hidden;
     if (!dialog.open) dialog.showModal();
   };
+
+  $('ua-tr-payment-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const paymentForm = event.currentTarget;
+    const button = paymentForm.querySelector('button[type="submit"]');
+    const message = $('ua-tr-payment-message');
+    button.disabled = true;
+    fetch(paymentForm.action, {
+      method: 'POST',
+      body: new FormData(paymentForm),
+      headers: { Accept: 'application/json' }
+    }).then(async response => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Receipt upload failed. Search for your ticket again and retry.');
+      paymentForm.hidden = true;
+      message.textContent = data.message;
+      message.hidden = false;
+    }).catch(error => {
+      message.textContent = error.message;
+      message.hidden = false;
+    }).finally(() => { button.disabled = false; });
+  });
 
   function setError(input, errId, text) {
     $(errId).textContent = text;

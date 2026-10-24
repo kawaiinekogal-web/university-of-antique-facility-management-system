@@ -63,7 +63,7 @@
                             </td>
                             <td>
                                 <span class="{{ $user->position ? 'usr-unit' : 'uu-empty' }}">{{ $user->position ?: 'Not set' }}</span>
-                                @if ($isHead)<span class="uu-head" title="Can add, edit and deactivate accounts">Head</span>@endif
+                                @if ($isHead)<span class="uu-head" title="Can add, edit and deactivate accounts">{{ $prefix === 'college' ? 'College Admin' : 'Head' }}</span>@endif
                             </td>
                             <td class="pk-nowrap">{{ $user->created_at?->format('M d, Y') ?? '-' }}</td>
                             <td class="uu-actions-col">
@@ -93,9 +93,17 @@
         </div>
         <p class="pk-help uu-note">
             @if ($canManage)
-                As the head of your {{ $unitNoun }}, you can add, edit and deactivate accounts. Associated records are preserved. The original {{ $headTitle }} account can only be deactivated by the GSU admin.
+                @if ($prefix === 'college')
+                    As College Admin, you can add, edit and deactivate subaccounts for your college. Your own account cannot deactivate itself; GSU access is not needed to manage college subaccounts.
+                @else
+                    As the head of your {{ $unitNoun }}, you can add, edit and deactivate accounts. Associated records are preserved. The original {{ $headTitle }} account can only be deactivated by the GSU admin.
+                @endif
             @else
-                Only the {{ $headTitle }} can add, edit or deactivate accounts. You can edit your own account.
+                @if ($prefix === 'college')
+                    Only the designated College Admin can add, edit or deactivate college subaccounts. You can edit your own account.
+                @else
+                    Only the {{ $headTitle }} can add, edit or deactivate accounts. You can edit your own account.
+                @endif
             @endif
         </p>
     @else

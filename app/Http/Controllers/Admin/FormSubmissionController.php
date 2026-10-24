@@ -8,6 +8,7 @@ use App\Models\Facility;
 use App\Models\User;
 
 use App\Services\BookingService;
+use App\Services\GuestRequestEmailService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,8 @@ class FormSubmissionController extends Controller
 { 
     public function __construct(
         protected BookingService $bookingService,
-        protected NotificationService $notifications
+        protected NotificationService $notifications,
+        protected GuestRequestEmailService $guestRequestEmails
     ) {}
 
     /**
@@ -122,7 +124,17 @@ class FormSubmissionController extends Controller
 
         $payload['approved_datetime'] = now()->format('M d, Y h:i A');
         $submission->payload = $payload;
+        if ($submission->requester_type === 'guest' && $submission->payment_status === 'not_required') {
+            $submission->payment_status = 'pending_payment';
+        }
         $submission->save();
+        $this->guestRequestEmails->sendSubmissionUpdate($submission, 'approved', [
+            'booking_code' => $booking->booking_code,
+            'booking_date' => $booking->start_time?->format('D, M j, Y'),
+            'booking_time' => $booking->start_time && $booking->end_time
+                ? $booking->start_time->format('g:i A') . ' - ' . $booking->end_time->format('g:i A')
+                : null,
+        ]);
 
         if ($submission->requester) {
             $this->notifications->notifyFormApproved($submission->requester_id, $submission->id);
@@ -163,6 +175,9 @@ class FormSubmissionController extends Controller
         $submission->payload = $payload;
         $submission->status = 'disapproved';
         $submission->save();
+        $this->guestRequestEmails->sendSubmissionUpdate($submission, 'disapproved', [
+            'reason' => $payload['disapproval_reason'],
+        ]);
 
         if ($submission->requester) {
             $this->notifications->notifyFormDisapproved($submission->requester_id, $submission->id, $payload['disapproval_reason']);
@@ -198,6 +213,13 @@ class FormSubmissionController extends Controller
         }
 
         $booking = $result;
+        $this->guestRequestEmails->sendSubmissionUpdate($submission, 'booked', [
+            'booking_code' => $booking->booking_code,
+            'booking_date' => $booking->start_time?->format('D, M j, Y'),
+            'booking_time' => $booking->start_time && $booking->end_time
+                ? $booking->start_time->format('g:i A') . ' - ' . $booking->end_time->format('g:i A')
+                : null,
+        ]);
 
         return redirect()->route('admin.forms.facilities.index')
             ->with('status', "Reservation created (Code: {$booking->booking_code}) and request marked as reserved.");
@@ -217,6 +239,7 @@ class FormSubmissionController extends Controller
         }
 
         $submission->markPaymentVerified();
+        $this->guestRequestEmails->sendSubmissionUpdate($submission, 'payment_verified');
 
         return back()->with('status', 'Payment verified successfully.');
     }

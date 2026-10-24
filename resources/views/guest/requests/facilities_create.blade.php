@@ -305,36 +305,17 @@
                         </div>
                     </div>
                     <div class="pk-field u-mt-14">
-                        <label class="pk-label" for="noted_signatory_custom">Noted by (Immediate Head) <span class="pk-req">*</span></label>
-                        <input type="text" name="noted_signatory_custom" id="noted_signatory_custom" required class="pk-input" value="{{ old('noted_signatory_custom') }}" placeholder="Enter name of organization representative/immediate head">
+                        <label class="pk-label">Noted by (Immediate Head) <span class="pk-req">*</span></label>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="notary_type" value="custom" checked style="width: auto;">
+                                <span>Others (Specify Name)</span>
+                            </label>
+                        </div>
+                        <input type="text" name="noted_signatory_custom" id="noted_signatory_custom" required class="pk-input" value="{{ old('noted_signatory_custom') }}" placeholder="Enter name of organization representative/immediate head" style="margin-top: 12px;">
                         <p class="pk-help">Enter the name of your organization's representative or immediate head.</p>
                     </div>
                     <p class="ga-small">Director/Unit Head and OIC-VP for Administration and Finance approval will be processed by the GSU office.</p>
-                </div>
-            </div>
-
-            {{-- Payment + attachments --}}
-            <div class="pk-step">
-                <span class="pk-step-num">06</span>
-                <div>
-                    <h2>Payment &amp; documents</h2>
-                    <p class="pk-step-intro">Your request will be marked as "Pending Payment" until GSU verifies the receipt.</p>
-                    <div class="pk-grid-2">
-                        <label class="pk-drop ga-required-drop">
-                            <input type="file" name="payment_attachment" accept=".jpg,.jpeg,.png,.pdf" required data-empty="JPG, PNG, or PDF, max 10MB">
-                            <span class="pk-drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg></span>
-                            <span><strong>Payment Receipt <span class="pk-req u-text-danger">*</span></strong><span class="pk-drop-sub">JPG, PNG, or PDF, max 10MB</span></span>
-                        </label>
-                        <label class="pk-drop">
-                            <input type="file" name="attachments[]" multiple accept=".jpg,.jpeg,.png,.pdf" data-empty="JPG, PNG, or PDF, max 10 files, 10MB each">
-                            <span class="pk-drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></span>
-                            <span><strong>Supporting Documents (Optional)</strong><span class="pk-drop-sub">JPG, PNG, or PDF; max 10 files, 10MB each</span></span>
-                        </label>
-                    </div>
-                    <div class="ga-pass" role="note">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
-                        <span><strong>Note:</strong> This permit shall also serve as <strong>GATE PASS</strong> for the organizers.</span>
-                    </div>
                 </div>
             </div>
 

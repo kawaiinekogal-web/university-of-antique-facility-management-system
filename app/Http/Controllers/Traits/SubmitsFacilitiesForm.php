@@ -58,6 +58,7 @@ trait SubmitsFacilitiesForm
             'facility_ids'    => $facilityIds,
             'facility_name'   => $facilityNames[0],
             'facility_names'  => $facilityNames,
+            'venue_others'    => $validated['venue_others'] ?? '',
             'purpose'         => $validated['purpose'],
             'equipment'       => [
                 'monobloc_chair' => (int) $request->input('qty_monobloc', 0),

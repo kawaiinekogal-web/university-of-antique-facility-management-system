@@ -27,7 +27,7 @@
     <section class="pk-hero" style="--pk-img: url('{{ asset('img/facilities/busalian-hall.jpg') }}')">
         <div>
             <h1>Request a Facility</h1>
-            <p class="pk-hero-sub">No account needed. Fill in your details, pick a venue and date, and upload your payment receipt. You'll get a ticket code to track your request.</p>
+            <p class="pk-hero-sub">No account needed. Fill in your details, pick a venue and date, then use your ticket code to track your request and complete payment after approval.</p>
         </div>
         <div class="pk-hero-actions">
             {{-- No top bar on this page: just a way back --}}
@@ -314,10 +314,15 @@
                         </div>
                     </div>
                     <div class="pk-field u-mt-14">
-                        <label class="pk-label" for="noted_signatory_custom">Noted by (Immediate Head) <span class="pk-req">*</span></label>
+                        <label class="pk-label" for="noted_signatory_id">Noted by (Immediate Head) <span class="pk-req">*</span></label>
+                        <select name="noted_signatory_id" id="noted_signatory_id" required class="pk-input" @error('noted_signatory_id') aria-invalid="true" @enderror>
+                            <option value="" disabled {{ old('noted_signatory_id', 'custom') === '' ? 'selected' : '' }}>Suggested names unavailable</option>
+                            <option value="custom" {{ old('noted_signatory_id', 'custom') === 'custom' ? 'selected' : '' }}>Others (specify name)</option>
+                        </select>
                         <input type="text" name="noted_signatory_custom" id="noted_signatory_custom" required class="pk-input" value="{{ old('noted_signatory_custom') }}" placeholder="Full name" @error('noted_signatory_custom') aria-invalid="true" @enderror>
                         @error('noted_signatory_custom')<p class="pr-err">{{ $message }}</p>@enderror
-                        <p class="pk-help">The representative or immediate head of your organization.</p>
+                        @error('noted_signatory_id')<p class="pr-err">{{ $message }}</p>@enderror
+                        <p class="pk-help">Choose Others and enter the representative or immediate head of your organization.</p>
                     </div>
                     <p class="ga-small">Director/Unit Head and OIC-VP for Administration and Finance approval will be processed by the GSU office.</p>
                 </div>
@@ -328,13 +333,7 @@
                 <span class="pk-step-num">06</span>
                 <div>
                     <h2>Documents</h2>
-                    <p class="pk-step-intro">Upload your payment receipt with your request. GSU reviews the receipt before processing your request.</p>
-                    <label class="pk-drop">
-                        <input type="file" name="payment_attachment" accept=".jpg,.jpeg,.png,.pdf" required data-empty="JPG, PNG, or PDF, max 10MB" @error('payment_attachment') aria-invalid="true" @enderror>
-                        <span class="pk-drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg></span>
-                        <span><strong>Payment Receipt <span class="pk-req">*</span></strong><span class="pk-drop-sub">JPG, PNG, or PDF, max 10MB</span></span>
-                    </label>
-                    @error('payment_attachment')<p class="pr-err">{{ $message }}</p>@enderror
+                    <p class="pk-step-intro">Upload supporting documents with your request. Payment receipt upload becomes available in ticket tracking after GSU approves your request.</p>
                     <label class="pk-drop">
                         <input type="file" name="attachments[]" multiple accept=".jpg,.jpeg,.png,.pdf" data-empty="JPG, PNG, or PDF, max 10 files, 10MB each">
                         <span class="pk-drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></span>

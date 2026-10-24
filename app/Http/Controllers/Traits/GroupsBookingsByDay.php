@@ -11,10 +11,18 @@ trait GroupsBookingsByDay
     protected function resolveMonth(Request $request): Carbon
     {
         $month = $request->query('month');
+        if (! is_string($month) || ! preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
+            return now()->startOfMonth();
+        }
 
-        return $month
-            ? Carbon::createFromFormat('Y-m', $month)->startOfMonth()
-            : now()->startOfMonth();
+        try {
+            $current = Carbon::createFromFormat('!Y-m', $month);
+            return $current && $current->format('Y-m') === $month
+                ? $current->startOfMonth()
+                : now()->startOfMonth();
+        } catch (\Throwable) {
+            return now()->startOfMonth();
+        }
     }
 
     protected function groupByDay(Collection $bookings): array

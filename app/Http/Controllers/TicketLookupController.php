@@ -8,6 +8,7 @@ use App\Models\MaintenanceTicket;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Public "Track a request" lookup used by the landing page.
@@ -59,31 +60,71 @@ class TicketLookupController extends Controller
             return $notFound;
         }
 
-        // GSU reschedules the booking, not the request: report the booking's new schedule instead
+        // GSU reschedules the booking, not the request: report its new schedule with the same approved actions.
         $rescheduled = Booking::with('facilities')
             ->where('additional_details->form_submission_id', $submission->id)
             ->where('status', 'rescheduled')
             ->orderBy('start_time')
             ->first();
 
-        if ($rescheduled) {
-            return response()->json([
-                'status' => 'rescheduled',
-                'code'   => $code,
-                'venue'  => $rescheduled->facilities->pluck('name')->join(', ') ?: null,
-                'date'   => $rescheduled->start_time?->format('D, M j, Y'),
-                'time'   => $rescheduled->start_time && $rescheduled->end_time
-                    ? $rescheduled->start_time->format('g:i A') . ' – ' . $rescheduled->end_time->format('g:i A')
-                    : null,
-            ]);
-        }
+        $approved = in_array($submission->status, ['approved', 'reserved'], true);
+        $canUploadPayment = $approved && $submission->requester_type === 'guest'
+            && in_array($submission->payment_status, ['pending_payment', 'not_required'], true);
 
         return response()->json([
-            'status' => $submission->status,
+            'status' => $rescheduled ? 'rescheduled' : $submission->status,
             'code'   => $code,
-            'venue'  => $payload['facility_name'] ?? ($payload['facility_name_custom'] ?? null),
-            'date'   => $this->dateLabel($payload['date_activity'] ?? null, $payload['date_end'] ?? null),
-            'time'   => $this->timeLabel($payload['time_range'] ?? []),
+            'venue'  => $rescheduled
+                ? ($rescheduled->facilities->pluck('name')->join(', ') ?: null)
+                : ($payload['facility_name'] ?? ($payload['facility_name_custom'] ?? null)),
+            'date'   => $rescheduled
+                ? $rescheduled->start_time?->format('D, M j, Y')
+                : $this->dateLabel($payload['date_activity'] ?? null, $payload['date_end'] ?? null),
+            'time'   => $rescheduled && $rescheduled->start_time && $rescheduled->end_time
+                ? $rescheduled->start_time->format('g:i A') . ' – ' . $rescheduled->end_time->format('g:i A')
+                : $this->timeLabel($payload['time_range'] ?? []),
+            'payment_status' => $submission->payment_status ?? 'not_required',
+            'can_download_pdf' => $approved,
+            'pdf_url' => $approved
+                ? URL::temporarySignedRoute('guest.forms.facilities.pdf', now()->addMinutes(30), ['submission' => $submission->id], false)
+                : null,
+            'can_upload_payment' => $canUploadPayment,
+            'payment_upload_url' => $canUploadPayment
+                ? URL::temporarySignedRoute('ticket.payment.upload', now()->addMinutes(15), ['submission' => $submission->id], false)
+                : null,
+        ]);
+    }
+
+    public function uploadPayment(Request $request, FormSubmission $submission): JsonResponse
+    {
+        abort_unless(
+            $submission->type === 'facilities_utilization' && $submission->requester_type === 'guest',
+            404
+        );
+        abort_unless(in_array($submission->status, ['approved', 'reserved'], true), 403, 'Payment can only be uploaded after approval.');
+        abort_unless(
+            in_array($submission->payment_status, ['pending_payment', 'not_required'], true),
+            409,
+            'A payment receipt has already been submitted.'
+        );
+
+        $validated = $request->validate([
+            'payment_attachment' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'mimetypes:image/jpeg,image/png,application/pdf',
+                'max:10240',
+            ],
+        ]);
+
+        $submission->payment_attachment = $validated['payment_attachment']->store('receipts', 'payment_receipts');
+        $submission->payment_status = 'payment_uploaded';
+        $submission->save();
+
+        return response()->json([
+            'payment_status' => $submission->payment_status,
+            'message' => 'Receipt submitted. GSU will verify your payment.',
         ]);
     }
 

@@ -38,6 +38,11 @@ trait ManagesUnitUsers
     /** College / organization fields copied from the signed-in user onto new accounts. */
     abstract protected function unitAttributes(): array;
 
+    protected function nameRules(): array
+    {
+        return ['required', 'string', 'max:255'];
+    }
+
     public function index()
     {
         $users = $this->unitUsers()->orderBy('name')->get();
@@ -61,7 +66,7 @@ trait ManagesUnitUsers
         abort_unless($this->isHead(auth()->user()), 403);
 
         $data = $request->validate([
-            'name'     => 'required|string|max:255',
+            'name'     => $this->nameRules(),
             'contact_number' => ['nullable', 'string', 'regex:/^\d{4}-?\d{3}-?\d{4}$/'],
             'position' => 'required|string|max:120',
             'email'    => 'required|email|max:255|unique:users,email',
@@ -97,7 +102,7 @@ trait ManagesUnitUsers
         abort_unless($canManage || $user->id === auth()->id(), 403);
 
         $data = $request->validate([
-            'name'     => 'required|string|max:255',
+            'name'     => $this->nameRules(),
             'contact_number' => ['nullable', 'string', 'regex:/^\d{4}-?\d{3}-?\d{4}$/'],
             'position' => [$canManage ? 'required' : 'nullable', 'string', 'max:120'],
             'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],

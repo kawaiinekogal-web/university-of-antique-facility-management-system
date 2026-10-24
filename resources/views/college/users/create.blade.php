@@ -7,7 +7,7 @@
     'unitNoun'      => 'college',
     'roleLabel'     => 'College Staff',
     'positionLabel' => 'Position in the department',
-    'headTitle'     => 'Dean',
+    'headTitle'     => 'College Admin',
     'positions'     => ['Dean', 'Program Head', 'Staff'],
 ])
 @endsection

@@ -11,28 +11,19 @@ use Tests\TestCase;
 
 class PaymentReceiptValidationTest extends TestCase
 {
-    public function test_public_requests_require_a_payment_receipt(): void
+    public function test_public_requests_do_not_require_a_payment_receipt_before_approval(): void
     {
-        $this->assertTrue($this->receiptValidator()->fails());
+        $this->assertFalse($this->receiptValidator()->fails());
     }
 
-    public function test_public_requests_accept_supported_receipts_under_the_size_limit(): void
+    public function test_public_requests_cannot_submit_a_receipt_before_approval(): void
     {
         $file = UploadedFile::fake()->createWithContent(
             'receipt.pdf',
             "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n"
         );
 
-        $this->assertFalse($this->receiptValidator($file)->fails());
-    }
-
-    public function test_public_requests_accept_a_receipt_at_the_ten_megabyte_limit(): void
-    {
-        $header = "%PDF-1.4\n";
-        $content = $header . str_repeat('0', 10 * 1024 * 1024 - strlen($header));
-        $file = UploadedFile::fake()->createWithContent('receipt.pdf', $content);
-
-        $this->assertFalse($this->receiptValidator($file)->fails());
+        $this->assertTrue($this->receiptValidator($file)->fails());
     }
 
     public function test_public_requests_reject_receipts_larger_than_ten_megabytes(): void

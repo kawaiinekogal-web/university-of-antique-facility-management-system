@@ -117,6 +117,7 @@
     <div class="pk-form-layout">
         <form method="POST" action="{{ route('admin.bookings.update', $booking) }}" class="pk-form-card" id="modify-form">
             @csrf
+            @method('PUT')
 
             {{-- Schedule --}}
             <div class="pk-step">

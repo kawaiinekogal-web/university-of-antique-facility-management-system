@@ -16,11 +16,11 @@ class SignatorySeeder extends Seeder
             ['type' => 'program_head', 'name' => 'CCIS Program Head','unit' => 'CCIS'],
 
             // CEA
-            ['type' => 'dean',         'name' => 'CCIS Dean',        'unit' => 'CEA'],
+            ['type' => 'dean',         'name' => 'CEA Dean',         'unit' => 'CEA'],
             ['type' => 'program_head', 'name' => 'CEA Program Head', 'unit' => 'CEA'],
 
             // CMG
-            ['type' => 'dean',         'name' => 'CBA Dean',         'unit' => 'CMG'],
+            ['type' => 'dean',         'name' => 'CMG Dean',         'unit' => 'CMG'],
             ['type' => 'program_head', 'name' => 'CMG Program Head',  'unit' => 'CMG'],
 
 

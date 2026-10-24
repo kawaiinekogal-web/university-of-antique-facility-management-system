@@ -81,7 +81,13 @@
                                 <button type="button" class="uu-chip" data-position="{{ $p }}">{{ $p }}</button>
                             @endforeach
                         </div>
-                        <p class="pk-help uu-note">Giving someone the {{ $headTitle }} position lets them add, edit and delete accounts too.</p>
+                        <p class="pk-help uu-note">
+                            @if ($prefix === 'college')
+                                Only the primary college account has College Admin access; staff positions do not grant account-management rights.
+                            @else
+                                Giving someone the {{ $headTitle }} position lets them add, edit and deactivate accounts too.
+                            @endif
+                        </p>
                     @endif
                 </div>
             </div>

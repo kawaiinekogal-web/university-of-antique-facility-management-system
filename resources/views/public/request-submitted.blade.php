@@ -7,6 +7,7 @@
 @php
     $code = 'FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-' . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT);
     $name = trim((string) ($submission->payload['client_name'] ?? ''));
+    $email = trim((string) ($submission->payload['email'] ?? ''));
     $lastName = $name !== '' ? collect(preg_split('/\s+/', $name))->last() : '';
 @endphp
 
@@ -19,6 +20,11 @@
             </p>
             <h1>Thank you{{ $name !== '' ? ', ' . $name : '' }}!</h1>
             <p class="pk-hero-sub">Your facility request was received. Keep your ticket code: it's how you check your request's status.</p>
+            @if (session('tracking_email_sent'))
+                <p class="pk-hero-sub">We sent tracking code <strong>{{ $code }}</strong> to <strong>{{ $email }}</strong>. Use it with your last name to check your request.</p>
+            @else
+                <p class="pk-hero-sub">We couldn't email tracking code <strong>{{ $code }}</strong>{{ $email !== '' ? ' to ' . $email : '' }}. Save the code below to check your request.</p>
+            @endif
         </div>
         <div class="pk-hero-actions">
             <button type="button" class="pk-btn" data-ticket-open>
@@ -40,8 +46,8 @@
         <div class="pr-step">
             <span class="pr-step-num">2</span>
             <div>
-                <h2>Receipt uploaded</h2>
-                <p>Your payment receipt was submitted with your request. GSU will review it before processing your request.</p>
+                <h2>Wait for approval</h2>
+                <p>GSU will review your request. If approved, upload your payment receipt using the ticket tracker.</p>
             </div>
         </div>
         <div class="pr-step">
