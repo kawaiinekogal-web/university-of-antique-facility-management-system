@@ -82,6 +82,29 @@
             </div>
         </details>
     </div>
+
+    <div class="ov-card">
+        <div class="ov-card-head">
+            <h3>Facility occupancy</h3>
+            <span>{{ $monthLabel }}</span>
+        </div>
+        <p class="ov-method-note">Utilization is booked hours ÷ {{ number_format($availableCalendarHours, 0) }} calendar hours for this month. Operating hours are not configured.</p>
+        <div class="pk-table-wrap">
+            <table class="pk-table">
+                <thead><tr><th>Facility</th><th class="u-text-right">Booked hours</th><th class="u-text-right">Available calendar hours</th><th class="u-text-right">Utilization</th></tr></thead>
+                <tbody>
+                    @foreach ($facilityUtilization as $row)
+                        <tr>
+                            <td class="pk-strong">{{ $row['name'] }}</td>
+                            <td class="u-text-right">{{ number_format($row['booked_hours'], 2) }}</td>
+                            <td class="u-text-right">{{ number_format($row['available_hours'], 0) }}</td>
+                            <td class="u-text-right"><strong>{{ number_format($row['utilization'], 2) }}%</strong></td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 {{-- Inside the section: layouts have no @stack('scripts'), so a pushed script never ran --}}

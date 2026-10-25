@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\FormSubmission;
 use App\Models\MaintenanceTicket;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,13 +29,13 @@ class TicketLookupController extends Controller
         $notFound = response()->json(['status' => 'notfound'], 404);
 
         if ($type === 'RM') {
-            return $this->repairTicket($code, $lastName) ?? $notFound;
+            return $this->repairTicket($code, $lastName, $request->user()) ?? $notFound;
         }
         if ($type !== 'FM') {
             return $notFound;
         }
 
-        if ($lastName === '' || ! preg_match('/^FM-(\d{4})-(\d{1,10})$/', $code, $m)) {
+        if (! preg_match('/^FM-(\d{4})-(\d{1,10})$/', $code, $m)) {
             return $notFound;
         }
 
@@ -48,16 +49,23 @@ class TicketLookupController extends Controller
 
         $payload = $submission->payload ?? [];
 
-        // Accept the ending of any name on the request (requester name, guest client name, account name).
-        // Handles multi-word last names ("Dela Cruz") and suffixes ("Dapar II", "Santos Jr.").
+        // Anonymous guest lookups require a last name; internal requests require the owner or an admin.
         $names = array_filter([
             $payload['requester_name'] ?? null,
             $payload['client_name'] ?? null,
             optional($submission->requester)->name,
         ]);
 
-        if (! $this->lastNameMatches($lastName, $names)) {
-            return $notFound;
+        if ($submission->requester_type === 'guest') {
+            if ($lastName === '' || ! $this->lastNameMatches($lastName, $names)) {
+                return $notFound;
+            }
+        } else {
+            $user = $request->user();
+            $canSearchByCode = $user && ($user->isAdmin() || (int) $submission->requester_id === (int) $user->id);
+            if (! $canSearchByCode) {
+                return $notFound;
+            }
         }
 
         // GSU reschedules the booking, not the request: report its new schedule with the same approved actions.
@@ -132,15 +140,20 @@ class TicketLookupController extends Controller
      * Repair & maintenance ticket by its tracking code (e.g. RM-20261019-PV739Q) + the sender's last name.
      * Returns status (notified / pending / ongoing / success / failed), facility, subject and when it was sent.
      */
-    private function repairTicket(string $code, string $lastName): ?JsonResponse
+    private function repairTicket(string $code, string $lastName, ?User $user): ?JsonResponse
     {
-        if ($lastName === '' || ! preg_match('/^RM-[A-Z0-9-]{3,40}$/', $code)) {
+        if (! preg_match('/^RM-[A-Z0-9-]{3,40}$/', $code)) {
             return null;
         }
 
         $ticket = MaintenanceTicket::with(['requester', 'facility'])->where('ticket_code', $code)->first();
 
-        if (! $ticket || ! $this->lastNameMatches($lastName, array_filter([optional($ticket->requester)->name]))) {
+        if (! $ticket) {
+            return null;
+        }
+
+        $canSearchByCode = $user && ($user->isAdmin() || (int) $ticket->requester_id === (int) $user->id);
+        if (! $canSearchByCode && ($lastName === '' || ! $this->lastNameMatches($lastName, array_filter([optional($ticket->requester)->name])))) {
             return null;
         }
 

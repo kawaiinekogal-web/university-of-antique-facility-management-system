@@ -171,7 +171,11 @@ document.addEventListener('DOMContentLoaded', function () {
   <div class="ua-track-inner">
     <div class="ua-track-copy">
       <h2 id="ua-track-title">Searching for your ticket?</h2>
-      <p>Choose the ticket type, then type your code and last name to see where your request stands — no log in needed.</p>
+      @if (auth()->check())
+        <p>Enter a ticket code to check a request linked to your signed-in account.</p>
+      @else
+        <p>Guests can check a facility request with its code and last name. Staff must sign in to look up requests by code.</p>
+      @endif
     </div>
 
     <form class="ua-track-form" id="ua-track-form" novalidate data-endpoint="{{ route('ticket.lookup') }}" role="search" aria-label="Ticket status">
@@ -196,13 +200,15 @@ document.addEventListener('DOMContentLoaded', function () {
             <input id="ua-track-code" name="code" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="24" placeholder="FM-2026-00123" aria-describedby="ua-track-code-err">
           </div>
         </div>
-        <div class="ua-track-seg" data-for="ua-track-last">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
-          <div class="ua-track-seg-text">
-            <label for="ua-track-last">Last name</label>
-            <input id="ua-track-last" name="last_name" type="text" autocomplete="family-name" maxlength="60" placeholder="Dela Cruz" aria-describedby="ua-track-last-err">
+        @guest
+          <div class="ua-track-seg" data-for="ua-track-last">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+            <div class="ua-track-seg-text">
+              <label for="ua-track-last">Guest last name</label>
+              <input id="ua-track-last" name="last_name" type="text" autocomplete="family-name" maxlength="60" placeholder="Dela Cruz" aria-describedby="ua-track-last-err" required>
+            </div>
           </div>
-        </div>
+        @endguest
         <button type="submit" class="ua-track-submit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
           Check status
@@ -277,6 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!form || !dialog) return;
   const codeInput = document.getElementById('ua-track-code');
   const lastInput = document.getElementById('ua-track-last');
+  const lastNameRequired = !!lastInput;
   const typeSelect = document.getElementById('ua-track-type');
   const $ = (id) => document.getElementById(id);
 
@@ -293,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   // Status sets per ticket type. FM = facility request, RM = repair & maintenance.
   const common = {
-    notfound: { label: 'No match found', tone: '#475569', bg: '#F1F5F9', icon: 'search', msg: 'We couldn’t find a ticket with that code and last name. Check both and try again.' },
+    notfound: { label: 'No match found', tone: '#475569', bg: '#F1F5F9', icon: 'search', msg: 'No matching ticket was found. Check the code and, for guest requests, the last name.' },
     busy:     { label: 'Too many searches', tone: '#475569', bg: '#F1F5F9', icon: 'clock', msg: 'Please wait a minute, then try again.' },
     offline:  { label: 'Lookup not available yet', tone: '#475569', bg: '#F1F5F9', icon: 'plug', msg: 'Online status tracking isn’t connected yet. Sign in to your portal to see your request, or contact the GSU office.' }
   };
@@ -420,25 +427,28 @@ document.addEventListener('DOMContentLoaded', function () {
     codeInput.value = codeInput.value.toUpperCase().replace(/\s+/g, '');
     if (codeInput.getAttribute('aria-invalid') === 'true') setError(codeInput, 'ua-track-code-err', '');
   });
-  lastInput.addEventListener('input', function () {
-    if (lastInput.getAttribute('aria-invalid') === 'true') setError(lastInput, 'ua-track-last-err', '');
-  });
+  if (lastInput) {
+    lastInput.addEventListener('input', function () {
+      if (lastInput.getAttribute('aria-invalid') === 'true') setError(lastInput, 'ua-track-last-err', '');
+    });
+  }
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     const code = codeInput.value.trim().toUpperCase();
-    const last = lastInput.value.trim();
+    const last = lastInput ? lastInput.value.trim() : '';
     const kind = typeSelect.value, k = kinds[kind];
     const codeOk = setError(codeInput, 'ua-track-code-err',
       !code ? 'Enter your ticket code.' : (!new RegExp('^' + kind + '[-A-Z0-9]{3,}$').test(code) ? k.name + ' tickets start with ' + kind + ', e.g. ' + k.example + '.' : ''));
-    const lastOk = setError(lastInput, 'ua-track-last-err', !last ? 'Enter your last name.' : '');
+    const lastOk = !lastNameRequired || setError(lastInput, 'ua-track-last-err', !last ? 'Enter your last name.' : '');
     if (!codeOk) { codeInput.focus(); return; }
     if (!lastOk) { lastInput.focus(); return; }
 
-    // The lookup endpoint isn't built yet (UI only). When it exists, set data-endpoint on the form.
     const endpoint = form.dataset.endpoint;
     if (!endpoint) { window.uaShowTicketResult({ kind: kind, status: 'offline', code: code }); return; }
-    fetch(endpoint + '?' + new URLSearchParams({ type: kind, code: code, last_name: last }), { headers: { Accept: 'application/json' } })
+    const params = new URLSearchParams({ type: kind, code: code });
+    if (last) params.set('last_name', last);
+    fetch(endpoint + '?' + params, { headers: { Accept: 'application/json' } })
       .then(r => r.ok ? r.json() : (r.status === 429 ? { status: 'busy' } : { status: 'notfound' }))
       .then(data => window.uaShowTicketResult(Object.assign({ kind: kind, code: code }, data)))
       .catch(() => window.uaShowTicketResult({ kind: kind, status: 'offline', code: code }));

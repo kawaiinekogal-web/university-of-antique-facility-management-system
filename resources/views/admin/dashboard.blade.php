@@ -66,6 +66,24 @@
     </div>
   </section>
 
+  <section class="dash-availability" aria-label="Current facility availability">
+    <div class="dash-availability-item">
+      <span class="dash-availability-dot is-available" aria-hidden="true"></span>
+      <span>Available</span>
+      <strong>{{ $availabilityStats['available'] }}</strong>
+    </div>
+    <div class="dash-availability-item">
+      <span class="dash-availability-dot is-unavailable" aria-hidden="true"></span>
+      <span>Unavailable</span>
+      <strong>{{ $availabilityStats['unavailable'] }}</strong>
+    </div>
+    <div class="dash-availability-item">
+      <span class="dash-availability-dot is-maintenance" aria-hidden="true"></span>
+      <span>Under maintenance</span>
+      <strong>{{ $availabilityStats['maintenance'] }}</strong>
+    </div>
+  </section>
+
   {{-- Charts --}}
   <section class="dash-charts">
     <!-- Facilities Requests Chart (Donut) -->

@@ -187,10 +187,18 @@ class BookingController extends Controller
             ->whereIn('status', ['reserved', 'rescheduled', 'completed'])
             ->get();
 
-        $series = Facility::orderBy('name')->pluck('name')->mapWithKeys(fn ($name) => [$name => 0])->all();
+        $facilities = Facility::orderBy('name')->get();
+        $series = $facilities->pluck('name')->mapWithKeys(fn ($name) => [$name => 0])->all();
         $series['OTHERS'] = 0;
+        $bookedHours = array_fill_keys($facilities->pluck('id')->all(), 0.0);
+        $monthEndExclusive = $start->copy()->addMonth();
+        $availableCalendarHours = $start->diffInSeconds($monthEndExclusive) / 3600;
 
         foreach ($bookings as $booking) {
+            $overlapStart = $booking->start_time->greaterThan($start) ? $booking->start_time->copy() : $start->copy();
+            $overlapEnd = $booking->end_time->lessThan($monthEndExclusive) ? $booking->end_time->copy() : $monthEndExclusive->copy();
+            $hours = $overlapStart->lt($overlapEnd) ? $overlapStart->diffInSeconds($overlapEnd) / 3600 : 0;
+
             if ($booking->facilities->isEmpty()) {
                 $series['OTHERS']++;
                 continue;
@@ -199,15 +207,29 @@ class BookingController extends Controller
             foreach ($booking->facilities as $facility) {
                 if (array_key_exists($facility->name, $series)) {
                     $series[$facility->name]++;
+                    $bookedHours[$facility->id] += $hours;
                 } else {
                     $series['OTHERS']++;
                 }
             }
         }
 
+        $facilityUtilization = $facilities->map(function (Facility $facility) use ($bookedHours, $availableCalendarHours) {
+            $hours = round($bookedHours[$facility->id] ?? 0, 2);
+
+            return [
+                'name' => $facility->name,
+                'booked_hours' => $hours,
+                'available_hours' => round($availableCalendarHours, 2),
+                'utilization' => $availableCalendarHours > 0 ? round($hours / $availableCalendarHours * 100, 2) : 0,
+            ];
+        });
+
         return view('admin.overview.index', [
             'currentMonth' => $current,
             'series'       => $series,
+            'facilityUtilization' => $facilityUtilization,
+            'availableCalendarHours' => round($availableCalendarHours, 2),
         ]);
     }
 

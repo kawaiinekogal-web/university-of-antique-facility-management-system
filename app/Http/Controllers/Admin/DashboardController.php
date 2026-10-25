@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Facility;
 use App\Models\FormSubmission;
 use App\Models\MaintenanceTicket;
 use Illuminate\Http\Request;
@@ -21,6 +22,17 @@ class DashboardController extends Controller
         ];
         $facilitiesStats['total'] = array_sum($facilitiesStats);
 
+        $availabilityStats = ['available' => 0, 'unavailable' => 0, 'maintenance' => 0];
+        Facility::query()->get(['is_active', 'availability_status'])->each(function (Facility $facility) use (&$availabilityStats) {
+            if ($facility->availability_status === 'maintenance') {
+                $availabilityStats['maintenance']++;
+            } elseif (! $facility->isAvailable()) {
+                $availabilityStats['unavailable']++;
+            } else {
+                $availabilityStats['available']++;
+            }
+        });
+
         // Maintenance Tickets Statistics
         $maintenanceStats = [
             'pending' => MaintenanceTicket::where('status', 'pending')->count(),
@@ -31,6 +43,6 @@ class DashboardController extends Controller
         ];
         $maintenanceStats['total'] = array_sum($maintenanceStats);
 
-        return view('admin.dashboard', compact('facilitiesStats', 'maintenanceStats'));
+        return view('admin.dashboard', compact('facilitiesStats', 'maintenanceStats', 'availabilityStats'));
     }
 }

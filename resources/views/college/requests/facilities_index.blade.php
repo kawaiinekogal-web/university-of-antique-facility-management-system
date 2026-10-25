@@ -3,7 +3,7 @@
 @section('college-content')
 @include('layouts.partials.page-kit')
 @php
-    $statusTabs = ['' => 'All', 'pending' => 'Pending', 'approved' => 'Approved', 'reserved' => 'Reserved', 'disapproved' => 'Disapproved', 'cancelled' => 'Cancelled'];
+    $statusTabs = ['' => 'All', 'pending' => 'Pending', 'approved' => 'Approved', 'disapproved' => 'Disapproved', 'cancelled' => 'Cancelled'];
     $currentStatus = (string) request('status', '');
     $hasFilters = request()->filled('search') || request()->filled('activity_date') || $currentStatus !== '';
     $steps = ['Submitted', 'In review', 'Approved', 'Reserved'];
@@ -64,7 +64,7 @@
             <label for="status" class="pk-label">Status</label>
             <select id="status" name="status" class="pk-input">
                 <option value="">All</option>
-                @foreach (['pending', 'approved', 'reserved', 'disapproved', 'cancelled'] as $st)
+                @foreach (['pending', 'approved', 'disapproved', 'cancelled'] as $st)
                     <option value="{{ $st }}" {{ request('status') === $st ? 'selected' : '' }}>{{ ucfirst($st) }}</option>
                 @endforeach
             </select>
@@ -91,7 +91,9 @@
             @foreach ($submissions as $submission)
                 @php
                     $step = $stepOf($submission->status);
-                    $statusLabel = ucwords(str_replace('_', ' ', $submission->status));
+                    $statusLabel = $submission->status === 'reserved'
+                        ? 'Approved & Reserved'
+                        : ucwords(str_replace('_', ' ', $submission->status));
                 @endphp
                 <article class="creq-card">
                     <div class="u-minw-0">

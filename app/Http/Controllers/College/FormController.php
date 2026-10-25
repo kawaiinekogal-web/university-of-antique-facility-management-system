@@ -166,7 +166,11 @@ class FormController extends Controller
 
         // Filter: status
         if ($status = request('status')) {
-            $query->where('status', $status);
+            if ($status === 'approved') {
+                $query->whereIn('status', ['approved', 'reserved']);
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         // Filter: activity date (payload->date_activity)

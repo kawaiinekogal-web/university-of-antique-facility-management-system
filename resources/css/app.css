@@ -2186,6 +2186,14 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 .dash-stat.is-dark .dash-stat-hint { color: rgba(255, 255, 255, .7); }
 .dash-stat.is-dark .dash-stat-value { color: #fff; }
 .dash-stat.is-dark .dash-stat-icon { background: rgba(255, 255, 255, .12); color: #fff; }
+.dash-availability { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.dash-availability-item { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-right: 1px solid var(--line); color: #525252; font-size: 13px; }
+.dash-availability-item:last-child { border-right: 0; }
+.dash-availability-item strong { margin-left: auto; color: #111; font-size: 20px; font-variant-numeric: tabular-nums; }
+.dash-availability-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; }
+.dash-availability-dot.is-available { background: #15803D; }
+.dash-availability-dot.is-unavailable { background: #B91C1C; }
+.dash-availability-dot.is-maintenance { background: #B45309; }
 
 /* Chart cards */
 .dash-charts {
@@ -2302,7 +2310,9 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 @media (max-width: 560px) {
   .dash-hero { padding: 24px 20px; }
   .dash-hero h1 { font-size: 24px; }
-  .dash-stats, .admin-grid { grid-template-columns: minmax(0, 1fr); }
+    .dash-stats, .dash-availability, .admin-grid { grid-template-columns: minmax(0, 1fr); }
+    .dash-availability-item { border-right: 0; border-bottom: 1px solid var(--line); }
+    .dash-availability-item:last-child { border-bottom: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .admin-card, .admin-card-arrow, .dash-hero-btn { transition: none; }
