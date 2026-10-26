@@ -10,7 +10,7 @@ Then visit: http://127.0.0.1:8000
 
 ## ✅ Feature 0: Public Request, Booking & Maintenance Tracker
 
-The homepage tracker is public; no account or sign-in is needed. For each test, use a valid tracking code and the last name of the person who submitted that record.
+The homepage tracker is public; no account or sign-in is needed. For new accounts/requests, use the exact separate tracking last name recorded for the submitter; it is not inferred from their full name. Legacy records without an explicit value continue using the older matching rule.
 
 1. Open the homepage and scroll to **Track a request or booking**.
 2. Confirm the form has a request type, tracking code, submitter's last name, and **Check status** button. The last-name field is required.

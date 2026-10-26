@@ -212,7 +212,7 @@ Redesigned on Oct 17 in black, white and greys (styles scoped to `.ul`, section 
     | Pop-up details | Status, venue, date and time | Status, venue, purpose, date and time | Status, facility, subject and sent date |
 
   - **Lookup endpoint:** the form calls `GET /track/ticket` (`ticket.lookup`, limited to 20 requests per minute), with the selected type, code and last name.
-  - **Name check:** the supplied surname must match the requester's name. Matching is case-insensitive and supports compound surnames and common suffixes. A missing surname or a non-matching code/name does not reveal the record; a wrong code and a wrong name return the same not-found result.
+  - **Name check:** new accounts and guest requests store the tracking last name separately; the user enters that exact value when looking up a record. The app does not guess a surname from a full name. Existing records without an explicit tracking last name retain legacy full-name matching until the account/requester is updated. A missing or non-matching value does not reveal the record; a wrong code and a wrong name return the same not-found result.
   - **Privacy and actions:** results show status and relevant schedule/request details, not the requester's identity. Lookups are read-only. Approved guest facility requests retain their existing signed receipt/PDF actions where applicable; internal facility requests, bookings and maintenance tickets do not expose editing actions.
   - **Rescheduled facility requests:** if GSU rescheduled the booking, the tracker shows its updated schedule.
   - Too many tries show a busy message (HTTP 429).

@@ -46,6 +46,7 @@ class PublicFacilityRequestController extends Controller
 
         $guest = $request->validate([
             'client_name'            => 'required|string|max:120',
+            'last_name'              => 'required|string|max:120',
             'contact_number'         => 'required|string|max:40',
             'email'                  => 'required|email|max:160',
             'address'                => 'required|string|max:255',
@@ -74,6 +75,7 @@ class PublicFacilityRequestController extends Controller
         // Save who actually asked (the shared submit code only knows the walk-in account)
         $payload = $submission->payload ?? [];
         $payload['requester_name']       = $guest['client_name'];
+        $payload['requester_last_name']  = $guest['last_name'];
         $payload['requester_unit']       = $guest['organization'];
         $payload['client_name']          = $guest['client_name'];
         $payload['contact_number']       = $guest['contact_number'];
@@ -92,7 +94,7 @@ class PublicFacilityRequestController extends Controller
 
         $trackingCode = 'FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-'
             . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT);
-        $lastName = collect(preg_split('/\s+/', trim($guest['client_name'])))->last() ?? '';
+        $lastName = $guest['last_name'];
         $emailSent = false;
 
         try {

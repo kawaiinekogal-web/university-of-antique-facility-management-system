@@ -18,6 +18,10 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if (! $this->routeIs('public.request.store') && $this->user()) {
+            $this->merge(['last_name' => $this->user()->last_name]);
+        }
+
         if (! $this->exists('facility_ids') && $this->filled('facility_id')) {
             $this->merge(['facility_ids' => [$this->input('facility_id')]]);
         }
@@ -26,6 +30,7 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'last_name' => ['required', 'string', 'max:120'],
             'date_activity' => 'required|date|after_or_equal:' . now()->addDays(30)->toDateString(),
             // Optional last day for multi-day events (same start/end time every day), up to 14 days in total
             'date_end'      => [
@@ -94,6 +99,13 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
                 'mimetypes:image/jpeg,image/png,application/pdf',
                 'max:10240',
             ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'last_name.required' => 'Your account needs a separately recorded last name before you can submit a request. Ask your unit administrator to update your account.',
         ];
     }
 

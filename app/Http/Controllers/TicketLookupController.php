@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\URL;
 /**
  * Public "Track a request" lookup used by the landing page.
  *
- * Public, read-only request status lookup. All request types require both the code
- * and the requester's last name.
+ * Public status lookup. All request types require both the code and the requester's
+ * separately recorded last name; legacy records without one retain old name matching.
  */
 class TicketLookupController extends Controller
 {
@@ -50,6 +50,10 @@ class TicketLookupController extends Controller
 
         $payload = $submission->payload ?? [];
 
+        $explicitLastNames = array_filter([
+            $payload['requester_last_name'] ?? null,
+            $submission->requester?->last_name,
+        ]);
         $names = array_filter([
             $payload['requester_name'] ?? null,
             $payload['client_name'] ?? null,
@@ -59,7 +63,7 @@ class TicketLookupController extends Controller
         if ($lastName === '') {
             return response()->json(['status' => 'needs_last_name']);
         }
-        if (! $this->lastNameMatches($lastName, $names)) {
+        if (! $this->lastNameMatches($lastName, $explicitLastNames, $names)) {
             return $notFound;
         }
 
@@ -147,7 +151,11 @@ class TicketLookupController extends Controller
         if ($lastName === '') {
             return response()->json(['status' => 'needs_last_name']);
         }
-        if (! $this->lastNameMatches($lastName, array_filter([$ticket->requester?->name]))) {
+        if (! $this->lastNameMatches(
+            $lastName,
+            array_filter([$ticket->requester?->last_name]),
+            array_filter([$ticket->requester?->name])
+        )) {
             return null;
         }
 
@@ -174,10 +182,20 @@ class TicketLookupController extends Controller
             return null;
         }
 
+        $submissionId = $booking->additional_details['form_submission_id'] ?? null;
+        $submission = $submissionId ? FormSubmission::find($submissionId) : null;
+
         if ($lastName === '') {
             return response()->json(['status' => 'needs_last_name']);
         }
-        if (! $this->lastNameMatches($lastName, array_filter([$booking->requester?->name]))) {
+        if (! $this->lastNameMatches(
+            $lastName,
+            array_filter([
+                $booking->requester?->last_name,
+                $submission?->payload['requester_last_name'] ?? null,
+            ]),
+            array_filter([$booking->requester?->name])
+        )) {
             return null;
         }
 
@@ -193,18 +211,28 @@ class TicketLookupController extends Controller
         ]);
     }
 
-    private function lastNameMatches(string $input, array $names): bool
+    private function lastNameMatches(string $input, array $explicitLastNames, array $legacyNames): bool
     {
         $norm = fn ($s) => trim(preg_replace('/\s+/u', ' ', mb_strtolower(str_replace([',', '.'], ' ', (string) $s))));
-        $dropSuffix = fn ($s) => preg_replace('/\s+(jr|sr|ii|iii|iv|v)$/u', '', $s);
-
         $typed = $norm($input);
         if ($typed === '') {
             return false;
         }
+
+        if ($explicitLastNames !== []) {
+            foreach ($explicitLastNames as $lastName) {
+                if ($typed === $norm($lastName)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        $dropSuffix = fn ($s) => preg_replace('/\s+(jr|sr|ii|iii|iv|v)$/u', '', $s);
         $typedBare = $dropSuffix($typed);
 
-        foreach ($names as $name) {
+        foreach ($legacyNames as $name) {
             $full = $norm($name);
             if (str_ends_with(' ' . $full, ' ' . $typed)
                 || str_ends_with(' ' . $dropSuffix($full), ' ' . $typedBare)) {

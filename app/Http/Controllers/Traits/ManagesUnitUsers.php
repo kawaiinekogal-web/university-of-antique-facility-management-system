@@ -67,6 +67,7 @@ trait ManagesUnitUsers
 
         $data = $request->validate([
             'name'     => $this->nameRules(),
+            'last_name' => ['required', 'string', 'max:120'],
             'contact_number' => ['nullable', 'string', 'regex:/^\d{4}-?\d{3}-?\d{4}$/'],
             'position' => 'required|string|max:120',
             'email'    => 'required|email|max:255|unique:users,email',
@@ -75,6 +76,7 @@ trait ManagesUnitUsers
 
         User::create([
             'name'     => $data['name'],
+            'last_name' => $data['last_name'],
             'contact_number' => $data['contact_number'] ?? null,
             'position' => $data['position'],
             'email'    => $data['email'],
@@ -103,6 +105,7 @@ trait ManagesUnitUsers
 
         $data = $request->validate([
             'name'     => $this->nameRules(),
+            'last_name' => ['required', 'string', 'max:120'],
             'contact_number' => ['nullable', 'string', 'regex:/^\d{4}-?\d{3}-?\d{4}$/'],
             'position' => [$canManage ? 'required' : 'nullable', 'string', 'max:120'],
             'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
@@ -110,6 +113,7 @@ trait ManagesUnitUsers
         ], self::CONTACT_NUMBER_MESSAGES);
 
         $user->name  = $data['name'];
+        $user->last_name = $data['last_name'];
         $user->contact_number = $data['contact_number'] ?? null;
         $user->email = $data['email'];
         if ($canManage) {

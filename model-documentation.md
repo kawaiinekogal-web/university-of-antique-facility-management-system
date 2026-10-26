@@ -7,7 +7,7 @@
 **Table:** `users`
 
 ### Description
-The central authentication model. Extends Laravel's `Authenticatable` base. Represents all system users — admins (GSU staff), college staff, organization staff, and viewers.
+The central authentication model. Extends Laravel's `Authenticatable` base. Represents all system users — admins (GSU staff), college staff, organization staff, guests, and viewers. `last_name` is stored separately from `name` so status lookups do not infer a surname from culturally variable full-name formats.
 
 ### Schema
 
@@ -15,6 +15,7 @@ The central authentication model. Extends Laravel's `Authenticatable` base. Repr
 |---|---|---|---|
 | `id` | bigint (auto) | PK | Primary key |
 | `name` | string | required | Full name |
+| `last_name` | string(120) | nullable for legacy accounts; required when creating/updating an account | Exact name value used for public status verification; not parsed from `name` |
 | `email` | string | required, unique | Login email |
 | `email_verified_at` | timestamp | nullable | Email verification timestamp |
 | `password` | string | required, hashed | Bcrypt-hashed password |
@@ -26,7 +27,9 @@ The central authentication model. Extends Laravel's `Authenticatable` base. Repr
 | `updated_at` | timestamp | auto | Record update time |
 
 ### Fillable
-`name`, `email`, `password`, `role`, `college_name`, `organization_name`
+`name`, `last_name`, `email`, `password`, `role`, `college_name`, `organization_name`
+
+The additive migration leaves `last_name` null for existing accounts; legacy lookups continue using the former full-name matching until the account is updated with its explicit tracking last name.
 
 ### Hidden
 `password`, `remember_token`
@@ -168,8 +171,10 @@ Represents a facility reservation. Created when an admin converts an approved fo
 | Relationship | Type | Related Model | Foreign Key | Description |
 |---|---|---|---|---|
 | `requester()` | belongsTo | `User` | `requester_id` | The user who made the booking |
-| `facility()` | belongsTo | `Facility` | `facility_id` | The booked facility |
+| `facilities()` | belongsToMany | `Facility` | `booking_facility.booking_id` | Facilities included in this reservation |
 | `maintenanceTickets()` | hasMany | `MaintenanceTicket` | `booking_id` | Maintenance tickets associated with this booking |
+
+The `booking_facility` pivot is the active many-to-many association and supports reservations covering multiple facilities. The legacy `bookings.facility_id` column remains in the table schema but is not the model's current facility relationship. For a booking created from an FM request, the linked submission's `requester_last_name` is also used for exact status verification, including walk-in guest bookings attached to a shared account.
 
 ### Traits
 `HasFactory`
@@ -379,7 +384,7 @@ Tracks a facility utilization submission through its lifecycle from pending to a
 }
 ```
 
-Public guest submissions use `requester_type=guest` and are linked to a shared walk-in account; the visitor's actual name is stored in the payload. The public tracker checks the supplied surname against `requester_name`, `client_name`, and, when applicable, the associated requester's account name. A matching FM lookup returns status and relevant schedule details, not requester identity. Only approved guest facility submissions may receive temporary signed PDF/payment action URLs.
+New internal submissions save the account's explicit `last_name` as `requester_last_name` in the payload. Public guest submissions use `requester_type=guest` and are linked to a shared walk-in account; the visitor's full name and explicitly entered tracking last name (`requester_last_name`) are stored in the payload. New lookups compare that explicit value exactly (case and surrounding whitespace normalized); they do not infer a last name from the full name. Existing records without an explicit last name retain the legacy full-name matching behavior. A matching FM lookup returns status and relevant schedule details, not requester identity. Only approved guest facility submissions may receive temporary signed PDF/payment action URLs.
 
 ### Fillable
 `type`, `requester_id`, `requester_type`, `requester_unit`, `status`, `payload`

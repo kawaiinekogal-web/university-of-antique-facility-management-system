@@ -50,6 +50,7 @@ class UserController extends Controller
 
         $data = [
             'name'     => $validated['name'],
+            'last_name' => $validated['last_name'],
             'contact_number' => $validated['contact_number'] ?? null,
             'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
@@ -89,6 +90,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name'              => 'required|string|max:255',
+            'last_name'         => 'required|string|max:120',
             'contact_number'    => ['nullable', 'string', 'regex:/^\d{4}-?\d{3}-?\d{4}$/'],
             'email'             => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'password'          => 'nullable|string|min:8|confirmed',
@@ -103,6 +105,7 @@ class UserController extends Controller
         ]);
 
         $user->name           = $validated['name'];
+        $user->last_name      = $validated['last_name'];
         $user->contact_number = $validated['contact_number'] ?? null;
         $user->email          = $validated['email'];
         if (!empty($validated['password'])) {

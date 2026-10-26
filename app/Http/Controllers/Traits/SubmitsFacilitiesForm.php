@@ -46,6 +46,7 @@ trait SubmitsFacilitiesForm
             'control_no'      => null,
             'date_request'    => now()->toDateString(),
             'requester_name'  => $user->name,
+            'requester_last_name' => $validated['last_name'],
             'requester_unit'  => $this->requesterUnit(),
             'date_activity'   => $validated['date_activity'],
             // Last day of a multi-day event; null for single-day requests

@@ -155,6 +155,7 @@ class MultiFacilityRequestTest extends TestCase
     {
         $facility = $this->facility();
         $request = StoreFacilitiesUtilizationRequest::create('/college/requests/facilities', 'POST', [
+            'last_name' => 'User',
             'date_activity' => now()->addDays(30)->toDateString(),
             'start_time' => '09:00',
             'end_time' => '10:00',
@@ -170,6 +171,7 @@ class MultiFacilityRequestTest extends TestCase
         $this->assertSame([$facility->id], array_map('intval', $request->validated()['facility_ids']));
 
         $tooSoon = StoreFacilitiesUtilizationRequest::create('/college/requests/facilities', 'POST', [
+            'last_name' => 'User',
             'date_activity' => now()->addDays(29)->toDateString(),
             'start_time' => '09:00',
             'end_time' => '10:00',
@@ -249,6 +251,7 @@ class MultiFacilityRequestTest extends TestCase
     {
         return User::create([
             'name' => 'Multi Facility Test User',
+            'last_name' => 'User',
             'email' => 'multi-facility-' . uniqid() . '@example.test',
             'password' => 'test-password',
             'role' => 'college_staff',
@@ -304,6 +307,7 @@ class MultiFacilityRequestTest extends TestCase
 
     private function requestValidator(array $data): \Illuminate\Contracts\Validation\Validator
     {
+        $data['last_name'] ??= 'Test';
         $request = StoreFacilitiesUtilizationRequest::create('/college/requests/facilities', 'POST', $data);
         $validator = Validator::make($request->all(), $request->rules());
         $request->withValidator($validator);

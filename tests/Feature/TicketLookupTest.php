@@ -60,6 +60,74 @@ class TicketLookupTest extends TestCase
             ->assertJsonMissingPath('requester');
     }
 
+    public function test_explicit_last_name_is_matched_exactly_without_parsing_the_full_name(): void
+    {
+        $requester = $this->user('college_staff', 'CCIS');
+        $requester->name = 'María Jo Dela Cruz';
+        $requester->last_name = 'Dela Cruz';
+        $requester->save();
+        $booking = $this->booking($requester, 'college', 'BKG-20261025173545-11-EXPLICIT');
+
+        $this->getJson('/track/ticket?type=BK&code=' . $booking->booking_code . '&last_name=Dela%20Cruz')
+            ->assertOk()
+            ->assertJsonPath('code', $booking->booking_code);
+
+        $this->getJson('/track/ticket?type=BK&code=' . $booking->booking_code . '&last_name=Cruz')
+            ->assertNotFound();
+    }
+
+    public function test_facility_request_lookup_uses_its_separately_saved_last_name(): void
+    {
+        $requester = $this->user('college_staff', 'CCIS');
+        $requester->name = 'Dela Cruz Maria Jo';
+        $requester->last_name = null;
+        $requester->save();
+        $submission = FormSubmission::create([
+            'type' => 'facilities_utilization',
+            'requester_id' => $requester->id,
+            'requester_type' => 'college',
+            'requester_unit' => 'CCIS',
+            'status' => 'pending',
+            'payload' => [
+                'requester_name' => $requester->name,
+                'requester_last_name' => 'Dela Cruz',
+                'date_activity' => now()->addDays(40)->toDateString(),
+                'time_range' => ['start' => '09:00', 'end' => '10:00'],
+            ],
+        ]);
+        $code = 'FM-' . $submission->created_at->format('Y') . '-' . $submission->id;
+
+        $this->getJson('/track/ticket?type=FM&code=' . $code . '&last_name=Dela%20Cruz')
+            ->assertOk()
+            ->assertJsonPath('status', 'pending');
+
+        $this->getJson('/track/ticket?type=FM&code=' . $code . '&last_name=Cruz')
+            ->assertNotFound();
+    }
+
+    public function test_guest_booking_uses_the_linked_request_tracking_last_name(): void
+    {
+        $walkIn = $this->user('guest');
+        $walkIn->name = 'Walk-in Guest';
+        $walkIn->last_name = null;
+        $walkIn->save();
+        $submission = FormSubmission::create([
+            'type' => 'facilities_utilization',
+            'requester_id' => $walkIn->id,
+            'requester_type' => 'guest',
+            'requester_unit' => 'Community Partner',
+            'status' => 'reserved',
+            'payload' => ['requester_name' => 'Dela Cruz Maria Jo', 'requester_last_name' => 'Dela Cruz'],
+        ]);
+        $booking = $this->booking($walkIn, 'guest', 'BKG-20261025173645-11-GUEST2');
+        $booking->additional_details = ['form_submission_id' => $submission->id];
+        $booking->save();
+
+        $this->getJson('/track/ticket?type=BK&code=' . $booking->booking_code . '&last_name=Dela%20Cruz')
+            ->assertOk()
+            ->assertJsonPath('code', $booking->booking_code);
+    }
+
     public function test_guest_booking_lookup_requires_the_requesters_last_name(): void
     {
         $guest = $this->user('guest');
@@ -71,6 +139,12 @@ class TicketLookupTest extends TestCase
         $this->getJson($url . '&last_name=Requester')
             ->assertOk()
             ->assertJsonPath('code', $booking->booking_code);
+    }
+
+    public function test_public_guest_request_requires_a_separately_entered_tracking_last_name(): void
+    {
+        $this->post('/request-facility', [])
+            ->assertSessionHasErrors('last_name');
     }
 
     public function test_college_facility_request_can_be_viewed_without_sign_in_with_requester_last_name(): void
@@ -132,6 +206,7 @@ class TicketLookupTest extends TestCase
     {
         return User::create([
             'name' => 'Taylor Requester',
+            'last_name' => null,
             'email' => uniqid('tracker-', true) . '@example.test',
             'password' => Hash::make('password'),
             'role' => $role,

@@ -82,7 +82,10 @@ class BookingController extends Controller
 
     public function storeDirect(Request $request)
     {
+        $request->merge(['account_last_name' => auth()->user()->last_name]);
+
         $data = $request->validate([
+            'account_last_name' => ['required', 'string', 'max:120'],
             'facility_ids'   => 'required|array|min:1',
             'facility_ids.*' => 'required|distinct|exists:facilities,id',
             'date_activity' => 'required|date|after_or_equal:today',
@@ -99,7 +102,10 @@ class BookingController extends Controller
             'qty_flag'      => 'nullable|integer|min:0',
             'qty_sound'     => 'nullable|integer|min:0',
             'qty_led'       => 'nullable|integer|min:0',
+        ], [
+            'account_last_name.required' => 'Update your account with a separate last name before creating a direct reservation.',
         ]);
+        unset($data['account_last_name']);
 
         $booking = $this->bookingService->createDirectBooking($data, auth()->id());
 

@@ -8,7 +8,7 @@
     $code = 'FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-' . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT);
     $name = trim((string) ($submission->payload['client_name'] ?? ''));
     $email = trim((string) ($submission->payload['email'] ?? ''));
-    $lastName = $name !== '' ? collect(preg_split('/\s+/', $name))->last() : '';
+    $lastName = trim((string) ($submission->payload['requester_last_name'] ?? ''));
 @endphp
 
 <div class="pk-page pr-done">
@@ -21,7 +21,7 @@
             <h1>Thank you{{ $name !== '' ? ', ' . $name : '' }}!</h1>
             <p class="pk-hero-sub">Your facility request was received. Keep your ticket code: it's how you check your request's status.</p>
             @if (session('tracking_email_sent'))
-                <p class="pk-hero-sub">We sent tracking code <strong>{{ $code }}</strong> to <strong>{{ $email }}</strong>. Use it with your last name to check your request.</p>
+                <p class="pk-hero-sub">We sent tracking code <strong>{{ $code }}</strong> to <strong>{{ $email }}</strong>. Use it with the tracking last name you provided to check your request.</p>
             @else
                 <p class="pk-hero-sub">We couldn't email tracking code <strong>{{ $code }}</strong>{{ $email !== '' ? ' to ' . $email : '' }}. Save the code below to check your request.</p>
             @endif
@@ -54,7 +54,7 @@
             <span class="pr-step-num">3</span>
             <div>
                 <h2>Track it anytime</h2>
-                <p>On the home page, enter <strong>{{ $code }}</strong>@if ($lastName !== '') and the last name <strong>{{ $lastName }}</strong>@endif.</p>
+                <p>On the home page, enter <strong>{{ $code }}</strong>@if ($lastName !== '') and the tracking last name <strong>{{ $lastName }}</strong>@endif.</p>
                 <a href="{{ route('home') }}#track" class="pr-link">Go to Track a request →</a>
             </div>
         </div>

@@ -17,6 +17,7 @@ class GuestUserSeeder extends Seeder
             ['email' => 'guest@example.com'],
             [
                 'name' => 'Guest User',
+                'last_name' => 'User',
                 'password' => Hash::make('password123'),
                 'role' => 'guest',
                 'organization_name' => 'External Organization',
@@ -28,6 +29,7 @@ class GuestUserSeeder extends Seeder
             ['email' => 'guest2@example.com'],
             [
                 'name' => 'Guest User 2',
+                'last_name' => 'User 2',
                 'password' => Hash::make('password123'),
                 'role' => 'guest',
                 'organization_name' => 'Community Partner',

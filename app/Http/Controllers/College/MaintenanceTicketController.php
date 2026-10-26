@@ -40,10 +40,13 @@ class MaintenanceTicketController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge(['requester_last_name' => auth()->user()->last_name]);
+
         // "Others" in the facility list: the requester types the place instead of picking a facility
         $isOther = $request->input('facility_id') === 'other';
 
         $validated = $request->validate([
+            'requester_last_name' => ['required', 'string', 'max:120'],
             'facility_id' => $isOther
                 ? ['required']
                 : ['required', Rule::exists('facilities', 'id')->where('is_active', true)],
@@ -51,8 +54,10 @@ class MaintenanceTicketController extends Controller
             'subject' => ['required', 'string', 'max:255'],
             'issue_description' => ['required', 'string', 'max:10000'],
         ], [
+            'requester_last_name.required' => 'Update your account with a separate last name before submitting a maintenance request.',
             'facility_other.required' => 'Type the place that needs repair in Others.',
         ]);
+        unset($validated['requester_last_name']);
 
         $validated['facility_id'] = $isOther ? null : $validated['facility_id'];
         $validated['facility_other'] = $isOther ? trim($validated['facility_other']) : null;

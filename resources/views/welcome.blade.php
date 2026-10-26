@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function () {
   <div class="ua-track-inner">
     <div class="ua-track-copy">
       <h2 id="ua-track-title">Track a request or booking</h2>
-      <p>No sign-in needed. Enter the tracking code and the last name of the person who submitted the request to view its status.</p>
+      <p>No sign-in needed. Enter the tracking code and the exact last name the submitter provided for tracking.</p>
     </div>
 
     <form class="ua-track-form" id="ua-track-form" novalidate data-endpoint="{{ route('ticket.lookup') }}" role="search" aria-label="Request, booking, or maintenance status">
@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
           <div class="ua-track-seg-text">
             <label for="ua-track-last">Requester&rsquo;s last name</label>
-            <input id="ua-track-last" name="last_name" type="text" autocomplete="family-name" maxlength="60" placeholder="Name of the person who submitted it" aria-describedby="ua-track-last-err" required>
+            <input id="ua-track-last" name="last_name" type="text" autocomplete="family-name" maxlength="120" placeholder="Last name provided for tracking" aria-describedby="ua-track-last-err" required>
           </div>
         </div>
         <button type="submit" class="ua-track-submit">
@@ -301,14 +301,14 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   // Status sets per request type. FM = facility request, BK = booking, RM = repair & maintenance.
   const common = {
-    notfound: { label: 'No match found', tone: '#475569', bg: '#F1F5F9', icon: 'search', msg: 'No matching request or booking was found. Check the tracking code and the last name of the person who submitted it.' },
+    notfound: { label: 'No match found', tone: '#475569', bg: '#F1F5F9', icon: 'search', msg: 'No matching request or booking was found. Check the tracking code and the exact last name provided for tracking.' },
     busy:     { label: 'Too many searches', tone: '#475569', bg: '#F1F5F9', icon: 'clock', msg: 'Please wait a minute, then try again.' },
     offline:  { label: 'Lookup not available yet', tone: '#475569', bg: '#F1F5F9', icon: 'plug', msg: 'Online status tracking isn’t available right now. Please try again or contact the GSU office.' }
   };
   const kinds = {
     FM: {
       name: 'Facility request', example: 'FM-2026-00123',
-      hint: 'Enter the tracking code and the last name of the person who submitted the request.',
+      hint: 'Enter the tracking code and the exact last name provided for tracking.',
       states: {
         pending:     { title: 'Waiting for review', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'Your request was received and is waiting for GSU review.' },
         pending_payment: { title: 'Payment being verified', label: 'Pending payment', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'GSU is checking your payment receipt before reviewing the request.' },
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     RM: {
       name: 'Repair & maintenance', example: 'RM-20261019-AB12CD',
-      hint: 'Enter the code and the last name of the person who submitted the maintenance request.',
+      hint: 'Enter the code and the exact last name provided for tracking.',
       states: {
         notified: { title: 'Admins notified', label: 'Notified', tone: '#475569', bg: '#F1F5F9', icon: 'bell', msg: 'Your repair request reached the facility administrators and is waiting to be scheduled.' },
         pending:  { title: 'Waiting to start', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'Your repair is queued and will start once a team is assigned.' },
@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     BK: {
       name: 'Facility booking', example: 'BKG-20261025173245-11-ABC123',
-      hint: 'Enter the booking code and the last name of the person who made the booking.',
+      hint: 'Enter the booking code and the exact last name provided for tracking.',
       states: {
       pending:     { title: 'Booking awaiting confirmation', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'This booking is waiting for confirmation. See the requested details below.' },
       reserved:    { title: 'Booking reserved', label: 'Reserved', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'check', msg: 'This reservation is confirmed. See the booking details below.' },
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function () {
     };
     const codeOk = setError(codeInput, 'ua-track-code-err',
       !code ? 'Enter your tracking code.' : (!codePatterns[kind].test(code) ? 'Enter a valid ' + k.name.toLowerCase() + ' code, e.g. ' + k.example + '.' : ''));
-    const lastOk = setError(lastInput, 'ua-track-last-err', !last ? 'Enter the requester’s last name.' : '');
+    const lastOk = setError(lastInput, 'ua-track-last-err', !last ? 'Enter the exact tracking last name.' : '');
     if (!codeOk) { codeInput.focus(); return; }
     if (!lastOk) { lastInput.focus(); return; }
 
@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(r => r.ok ? r.json() : (r.status === 429 ? { status: 'busy' } : { status: 'notfound' }))
       .then(data => {
         if (data.status === 'needs_last_name' && lastInput) {
-          setError(lastInput, 'ua-track-last-err', 'Enter the requester’s last name.');
+          setError(lastInput, 'ua-track-last-err', 'Enter the exact tracking last name.');
           lastInput.focus();
           return;
         }

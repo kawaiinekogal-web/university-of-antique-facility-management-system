@@ -35,11 +35,17 @@ class MaintenanceTicketController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge(['requester_last_name' => auth()->user()->last_name]);
+
         $validated = $request->validate([
+            'requester_last_name' => ['required', 'string', 'max:120'],
             'facility_id' => ['required', Rule::exists('facilities', 'id')->where('is_active', true)],
             'subject' => ['required', 'string', 'max:255'],
             'issue_description' => ['required', 'string', 'max:10000'],
+        ], [
+            'requester_last_name.required' => 'Update your account with a separate last name before submitting a maintenance request.',
         ]);
+        unset($validated['requester_last_name']);
 
         do {
             $ticketCode = 'RM-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));

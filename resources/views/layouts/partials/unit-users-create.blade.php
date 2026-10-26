@@ -53,12 +53,17 @@
                 <span class="ucf-num">01</span>
                 <div>
                     <h2>Profile</h2>
-                    <p class="ucf-intro">Who the person is and their role in your {{ $unitNoun }}.</p>
+                    <p class="ucf-intro">Enter the person's name and the exact last name they will use to check request status.</p>
                     <div class="ucf-fields">
                         <div class="pk-field">
                             <label for="name" class="pk-label">Full name <span class="pk-req">*</span></label>
                             <input type="text" name="name" id="name" required maxlength="255" class="pk-input" value="{{ old('name', $editUser?->name) }}" autocomplete="off">
                             @error('name')<p class="pk-error">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="pk-field">
+                            <label for="last_name" class="pk-label">Last name for tracking <span class="pk-req">*</span></label>
+                            <input type="text" name="last_name" id="last_name" required maxlength="120" class="pk-input" value="{{ old('last_name', $editUser?->last_name) }}" autocomplete="family-name">
+                            @error('last_name')<p class="pk-error">{{ $message }}</p>@enderror
                         </div>
                         @include('layouts.partials.contact-number-input', ['value' => old('contact_number', $editUser?->contact_number)])
                         <div class="pk-field">

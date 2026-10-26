@@ -80,12 +80,18 @@
                 <span class="pk-step-num">01</span>
                 <div>
                     <h2>Applicant</h2>
-                    <p class="pk-step-intro">Your contact details. GSU uses them to reach you about this request; your last name is also how you track it.</p>
+                    <p class="pk-step-intro">Enter your name and the exact last name you will use with your ticket code to track this request.</p>
                     <div class="pk-grid-2">
                         <div class="pk-field">
-                            <label class="pk-label" for="client_name">Name <span class="pk-req">*</span></label>
+                            <label class="pk-label" for="client_name">Full name <span class="pk-req">*</span></label>
                             <input type="text" name="client_name" id="client_name" required maxlength="120" autocomplete="name" class="pk-input" value="{{ old('client_name') }}" placeholder="First and last name" @error('client_name') aria-invalid="true" @enderror>
                             @error('client_name')<p class="pr-err">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="pk-field">
+                            <label class="pk-label" for="last_name">Last name for tracking <span class="pk-req">*</span></label>
+                            <input type="text" name="last_name" id="last_name" required maxlength="120" autocomplete="family-name" class="pk-input" value="{{ old('last_name') }}" @error('last_name') aria-invalid="true" @enderror>
+                            @error('last_name')<p class="pr-err">{{ $message }}</p>@enderror
+                            <p class="pk-help">Enter it exactly as you will type it in the status tracker.</p>
                         </div>
                         <div class="pk-field">
                             <label class="pk-label" for="contact_number">Contact No. <span class="pk-req">*</span></label>
