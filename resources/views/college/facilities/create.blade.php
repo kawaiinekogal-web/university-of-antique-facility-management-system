@@ -65,7 +65,7 @@
                 @if(!empty($coreFacilities))
                     @foreach($coreFacilities as $facility)
                         <option value="{{ $facility->id }}" {{ old('facility_id') == $facility->id ? 'selected' : '' }}>
-                            {{ $facility->name }}
+                            {{ $facility->name }} — Estimated seating: {{ \App\Support\VenueRates::estimatedSeatingCapacityFor($facility->name) ?? 'Not listed' }}
                         </option>
                     @endforeach
                 @endif

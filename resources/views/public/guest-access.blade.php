@@ -9,7 +9,7 @@
 @section('content')
 @php
     // Official rates (shared with the rates page and the request form)
-    $rates = collect(include resource_path('views/public/venue-rates.php'));
+    $rates = collect(\App\Support\VenueRates::all());
     $featured = $rates->filter(fn ($v) => !str_contains($v['rate'], '/head'))->take(6);
     $price = function ($rate) {
         $rest = trim(preg_replace('/^PhP\s*/', '', $rate));
@@ -138,7 +138,7 @@
                     </div>
                     <div class="gx-rate-body">
                         <h3>{{ $venue['name'] }}</h3>
-                        <p>{{ $venue['capacity'] !== '-' ? $venue['capacity'] : 'Open area' }}</p>
+                        <p>Estimated seating: {{ $venue['capacity'] !== '-' ? $venue['capacity'] : 'No fixed seating capacity' }}</p>
                     </div>
                     <p class="gx-rate-price"><strong>{{ $pr['amount'] }}</strong><span>{{ $pr['unit'] }}</span></p>
                 </li>

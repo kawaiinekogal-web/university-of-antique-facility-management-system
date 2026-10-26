@@ -84,6 +84,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>
                             {{ $facility->location ?: 'No location set' }}
                         </p>
+                        @include('partials.facility-seating-capacity', ['facility' => $facility])
                         @if ($facility->description)
                             <p class="fac-desc">{{ Str::limit($facility->description, 90) }}</p>
                         @else

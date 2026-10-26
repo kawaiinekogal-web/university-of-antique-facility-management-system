@@ -7,7 +7,7 @@
 @section('content')
 @include('layouts.partials.page-kit')
 @php
-    $venues = include resource_path('views/public/venue-rates.php');
+    $venues = \App\Support\VenueRates::all();
     // Split "PhP 15,000.00/day" into amount + unit for the price display
     $splitRate = function ($rate) {
         $rest = trim(preg_replace('/^PhP\s*/', '', $rate));
@@ -63,7 +63,7 @@
                     </div>
                     <span class="rt-cap">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0M16 4.5a3.5 3.5 0 010 7M21.5 20a6.5 6.5 0 00-4-6"/></svg>
-                        Capacity: {{ $venue['capacity'] }}
+                        Estimated seating capacity: {{ $venue['capacity'] === '-' ? 'No fixed seating capacity' : $venue['capacity'] }}
                     </span>
                     <ul class="rt-pack" aria-label="Facilities provided / package">
                         @foreach ($venue['package'] as $item)

@@ -28,6 +28,7 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">{{ $facility->name }}</div>
                                 <div class="text-sm text-gray-500">{{ Str::limit($facility->description, 50) }}</div>
+                                @include('partials.facility-seating-capacity', ['facility' => $facility])
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $facility->location }}

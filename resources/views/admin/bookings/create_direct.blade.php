@@ -154,6 +154,7 @@
                                         <span class="u-minw-0">
                                             <span class="vb-name">{{ $facility->name }}</span>
                                             @if ($facility->location)<span class="vb-owner">{{ $facility->location }}</span>@endif
+                                            @include('partials.facility-seating-capacity', ['facility' => $facility])
                                         </span>
                                         <span class="vb-count"><strong class="vb-count-num">–</strong><span>booked</span></span>
                                     </span>

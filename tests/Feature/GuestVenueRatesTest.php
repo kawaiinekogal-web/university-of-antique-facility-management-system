@@ -23,6 +23,11 @@ class GuestVenueRatesTest extends TestCase
         $this->get(route('public.request.create'))
             ->assertOk()
             ->assertSee('PaghiUsA Hall')
-            ->assertSee('₱ 15,000.00 / day');
+            ->assertSee('₱ 15,000.00 / day')
+            ->assertSee('Estimated seating capacity: 500-600 persons');
+
+        $this->get(route('public.rates'))
+            ->assertOk()
+            ->assertSee('Estimated seating capacity: 500-600 persons');
     }
 }

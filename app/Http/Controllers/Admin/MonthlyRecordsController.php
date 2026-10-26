@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Facility;
 use App\Models\FormSubmission;
+use App\Support\VenueRates;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -170,7 +171,7 @@ class MonthlyRecordsController extends Controller
 
     private function venueRates(): array
     {
-        return collect(include resource_path('views/public/venue-rates.php'))
+        return collect(VenueRates::all())
             ->mapWithKeys(function (array $venue) {
                 preg_match('/PhP\s*([\d,.]+)/i', $venue['rate'], $matches);
 

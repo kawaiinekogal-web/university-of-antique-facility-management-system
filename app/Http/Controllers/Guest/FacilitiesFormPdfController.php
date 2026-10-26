@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Facility;
 use App\Models\FormSubmission;
 use App\Services\GuestFacilitiesDocxFiller;
+use App\Support\VenueRates;
 use Illuminate\Http\Request;
 use PhpOffice\PhpWord\IOFactory;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -39,7 +40,7 @@ class FacilitiesFormPdfController extends Controller
         $facilitiesById = Facility::whereIn('id', $facilityIds)->get()->keyBy('id');
         $facilities = collect($facilityIds)->map(fn ($id) => $facilitiesById->get($id))->filter()->values();
 
-        $rateByName = collect(include resource_path('views/public/venue-rates.php'))
+        $rateByName = collect(VenueRates::all())
             ->mapWithKeys(function (array $venue) {
                 $name = $this->normalizeName($venue['name']);
                 preg_match('/PhP\s*([\d,.]+)/i', $venue['rate'], $matches);
