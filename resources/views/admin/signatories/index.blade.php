@@ -36,7 +36,7 @@
                             <td class="px-4 py-2">{{ $s->is_active ? 'Yes' : 'No' }}</td>
                             <td class="px-4 py-2 text-right space-x-2">
                                 <a href="{{ route('admin.signatories.edit', $s) }}" class="text-blue-600 hover:underline">Edit</a>
-                                <form method="POST" action="{{ route('admin.signatories.destroy', $s) }}" class="inline" onsubmit="return confirm('Delete this signatory?');">
+                                <form method="POST" action="{{ route('admin.signatories.destroy', $s) }}" class="inline" data-confirm="Delete this signatory?" data-confirm-title="Delete signatory?" data-confirm-action="Delete signatory" data-confirm-tone="danger">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-600 hover:underline">Delete</button>

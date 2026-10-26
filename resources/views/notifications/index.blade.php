@@ -187,7 +187,14 @@
         .catch(error => {
             console.error('Error:', error);
             button.disabled = false;
-            alert('Failed to mark notification as read. Please try again.');
+            const page = document.getElementById('notif-page');
+            if (page && !page.querySelector('.notif-inline-error')) {
+                const notice = document.createElement('div');
+                notice.className = 'notif-inline-error';
+                notice.setAttribute('role', 'alert');
+                notice.textContent = 'Could not mark this notification as read. Please try again.';
+                page.prepend(notice);
+            }
         });
     }
 </script>

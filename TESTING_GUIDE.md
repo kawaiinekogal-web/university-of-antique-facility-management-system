@@ -8,6 +8,24 @@ php artisan serve --host=127.0.0.1 --port=8000
 
 Then visit: http://127.0.0.1:8000
 
+## ✅ Feature 0: Public Request, Booking & Maintenance Tracker
+
+The homepage tracker is public; no account or sign-in is needed. For each test, use a valid tracking code and the last name of the person who submitted that record.
+
+1. Open the homepage and scroll to **Track a request or booking**.
+2. Confirm the form has a request type, tracking code, submitter's last name, and **Check status** button. The last-name field is required.
+3. Test each type using an existing test record:
+   - **Facility (FM):** `FM-<submission year>-<submission number>`.
+   - **Booking (BK):** use the booking's `BKG-…` reference.
+   - **Maintenance (RM):** use the repair ticket's `RM-…` code.
+4. Enter the submitter's last name and check the status.
+5. **Expected:** the result shows the record's status and relevant details without exposing the submitter's identity. No sign-in is requested, and staff facility requests, bookings, and maintenance results have no edit controls.
+6. Retry with a wrong last name and with a missing last name.
+   - **Expected:** a wrong name does not disclose the record (it displays the same not-found result as an invalid code); a missing surname prompts for the required name.
+7. If testing an approved guest facility request, verify that its existing receipt/PDF actions appear only when applicable.
+8. Check the form at desktop and phone widths.
+   - **Expected:** fields are readable and do not clip; the desktop layout uses two rows and the narrow layout stacks the fields.
+
 ## Test Accounts
 | Role | Email | Password |
 |------|-------|----------|

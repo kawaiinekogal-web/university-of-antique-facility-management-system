@@ -108,8 +108,9 @@
 </div>
 
 {{-- Inside the section: layouts have no @stack('scripts'), so a pushed script never ran --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script>
+    window.addEventListener('load', function () {
     (function () {
         const labels = @json($labels);
         const data   = @json($data);
@@ -157,5 +158,6 @@
             }
         });
     })();
+    });
 </script>
 @endsection

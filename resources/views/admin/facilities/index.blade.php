@@ -95,7 +95,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
                             Edit
                         </a>
-                        <form action="{{ route('admin.facilities.destroy', $facility) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this facility?');">
+                        <form action="{{ route('admin.facilities.destroy', $facility) }}" method="POST" data-confirm="Are you sure you want to delete this facility?" data-confirm-title="Delete facility?" data-confirm-action="Delete facility" data-confirm-tone="danger">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="fac-delete" aria-label="Delete {{ $facility->name }}">

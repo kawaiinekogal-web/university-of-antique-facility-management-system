@@ -193,8 +193,9 @@
 </div>
 
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script>
+window.addEventListener('load', function () {
 // Monthly Trend Chart
 const monthlyTrendData = {
     labels: @json(array_column($monthlyTrend, 'month')),
@@ -279,6 +280,7 @@ new Chart(document.getElementById('facilityUsageChart'), {
             }
         }
     }
+});
 });
 </script>
 @endsection

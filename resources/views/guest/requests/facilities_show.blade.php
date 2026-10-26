@@ -37,7 +37,7 @@
                     <form method="POST"
                           action="{{ route('guest.requests.facilities.cancel', $submission) }}"
                           class="inline-block ml-3"
-                          onsubmit="return confirm('Cancel this request? This cannot be undone.');">
+                          data-confirm="Cancel this request? This cannot be undone." data-confirm-title="Cancel request?" data-confirm-action="Cancel request" data-confirm-tone="danger">
                         @csrf
                         <button type="submit" class="px-2 py-1 border border-gray-400 rounded text-xs hover:bg-gray-100">
                             Cancel request

@@ -164,8 +164,10 @@
   </section>
 </div>
 
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script>
+window.addEventListener('load', function () {
 // Facilities Requests donut (Plotly). Categorical slots 1–5 of the validated palette, in fixed order;
 // slices keep visible labels because three slots sit below 3:1 contrast on white.
 const facilitiesTotal = {{ (int) $facilitiesStats['total'] }};
@@ -273,6 +275,7 @@ new Chart(maintenanceCtx, {
             }
         }
     }
+});
 });
 </script>
 @endsection

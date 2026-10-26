@@ -61,7 +61,7 @@ Represents a bookable university facility (e.g., halls, AVRs, gyms, track oval).
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | `id` | bigint (auto) | PK | Primary key |
-| `name` | string | required | Facility name (e.g., "BUSALAN HALL") |
+| `name` | string | required | Facility name (e.g., "BUSALIAN HALL") |
 | `location` | string | nullable | Campus/building location |
 | `owner_type` | string | default `'gsu'` | Ownership: `gsu`, `college`, or `org` |
 | `owner_college` | string | nullable | College name (for college-owned facilities) |
@@ -143,12 +143,12 @@ Represents a facility reservation. Created when an admin converts an approved fo
 | `facility_id` | bigint | FK → `facilities.id`, cascade delete | Booked facility |
 | `start_time` | datetime | required | Booking start date/time |
 | `end_time` | datetime | required | Booking end date/time |
-| `requester_type` | string | required | Requester type, commonly `college`, `org`, `guest`, or `admin` |
+| `requester_type` | string | required | Type of requester: `college` or `org` |
 | `requester_unit` | string | nullable | Unit name (e.g., "College of Engineering", "Student Council") |
-| `status` | string | default `'pending'` | Current values include `pending`, `reserved`, `rescheduled`, `completed`, and `cancelled`; `booked` is a legacy active status |
+| `status` | string | default `'pending'` | One of: `pending`, `approved`, `denied`, `rescheduled`, `cancelled` |
 | `request_method` | string | nullable | How the request was made (e.g., `online_form`) |
 | `purpose` | text | required | Purpose/reason for the booking |
-| `additional_details` | JSON/array | nullable | Extra data such as equipment quantities, linked submission ID, reschedule notes, and cancel reasons |
+| `additional_details` | text | nullable | JSON-encoded extra data (equipment quantities, reschedule notes, cancel reasons) |
 | `requested_at` | datetime | nullable | When the original request was submitted |
 | `approved_at` | datetime | nullable | When the booking was approved |
 | `booking_code` | string | unique | Public tracking reference (e.g., `BKG-20260521143000-5`) |
@@ -168,10 +168,8 @@ Represents a facility reservation. Created when an admin converts an approved fo
 | Relationship | Type | Related Model | Foreign Key | Description |
 |---|---|---|---|---|
 | `requester()` | belongsTo | `User` | `requester_id` | The user who made the booking |
-| `facilities()` | belongsToMany | `Facility` | `booking_facility.booking_id` | Facilities included in this reservation |
+| `facility()` | belongsTo | `Facility` | `facility_id` | The booked facility |
 | `maintenanceTickets()` | hasMany | `MaintenanceTicket` | `booking_id` | Maintenance tickets associated with this booking |
-
-The `booking_facility` pivot is the active many-to-many association and supports reservations covering multiple facilities. The legacy `bookings.facility_id` column remains in the table schema but is not the model's current facility relationship.
 
 ### Traits
 `HasFactory`
@@ -350,7 +348,7 @@ Tracks a facility utilization submission through its lifecycle from pending to a
 | `requester_id` | bigint | FK → `users.id`, cascade delete | User who submitted the form |
 | `requester_type` | string | required | Requester type: `college`, `org`, `admin`, or `guest` |
 | `requester_unit` | string | nullable | College name or organization name |
-| `status` | string | default `'pending'` | Values include `pending`, `pending_payment`, `approved`, `reserved`, `disapproved`, and `cancelled`; older records may use `booked` |
+| `status` | string | default `'pending'` | One of: `pending`, `approved`, `disapproved`, `cancelled`, `booked` |
 | `payload` | json | required | Full form data as JSON (see Payload Structure below) |
 | `payment_attachment` | string | nullable | Private storage path for a guest request's uploaded receipt |
 | `payment_status` | string | default `not_required` | Guest receipt workflow status (for example `pending_payment`, `payment_uploaded`, `payment_verified`, `not_required`) |
@@ -384,7 +382,7 @@ Tracks a facility utilization submission through its lifecycle from pending to a
 Public guest submissions use `requester_type=guest` and are linked to a shared walk-in account; the visitor's actual name is stored in the payload. The public tracker checks the supplied surname against `requester_name`, `client_name`, and, when applicable, the associated requester's account name. A matching FM lookup returns status and relevant schedule details, not requester identity. Only approved guest facility submissions may receive temporary signed PDF/payment action URLs.
 
 ### Fillable
-`type`, `requester_id`, `requester_type`, `requester_unit`, `status`, `payload`, `payment_attachment`, `payment_status`
+`type`, `requester_id`, `requester_type`, `requester_unit`, `status`, `payload`
 
 ### Casts
 - `payload` → `array`

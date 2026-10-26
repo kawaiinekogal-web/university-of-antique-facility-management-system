@@ -252,14 +252,14 @@
                 @if ($canDecide)
                     <p class="rqd-muted">Approve to confirm the venue, or disapprove to decline this request.</p>
                     <div class="rqd-btn-row">
-                        <form method="POST" action="{{ route('admin.forms.facilities.approve', $submission) }}" onsubmit="return confirm('Approve this facility request?');">
+                        <form method="POST" action="{{ route('admin.forms.facilities.approve', $submission) }}" data-confirm="Approve this facility request?" data-confirm-title="Approve request?" data-confirm-action="Approve request">
                             @csrf
                             <button type="submit" class="rqd-btn is-good">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
                                 Approve
                             </button>
                         </form>
-                        <form class="rqd-disapprove-form" method="POST" action="{{ route('admin.forms.facilities.disapprove', $submission) }}" onsubmit="return confirm('Disapprove this facility request? The reason will be sent to the requester.');">
+                        <form class="rqd-disapprove-form" method="POST" action="{{ route('admin.forms.facilities.disapprove', $submission) }}" data-confirm="Disapprove this facility request? The reason will be sent to the requester." data-confirm-title="Disapprove request?" data-confirm-action="Disapprove request" data-confirm-tone="danger">
                             @csrf
                             <label class="rqd-muted" for="disapproval-reason">Reason for disapproval (required)</label>
                             <textarea class="pk-input" id="disapproval-reason" name="reason" rows="3" maxlength="1000" required>{{ old('reason') }}</textarea>

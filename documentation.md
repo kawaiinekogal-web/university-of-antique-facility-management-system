@@ -1,17 +1,17 @@
 # UI Redesign Documentation — UA Facility Management System
 
-**Date:** October 15, 2026 · **Last updated:** October 19, 2026
+**Date:** October 15, 2026 · **Last updated:** October 25, 2026
 **Scope:** Mainly the user interface (Blade templates and styling). A few features needed approved backend changes: multi-day requests, the public guest request form, ticket lookup, team accounts, portal-only sign-in and user editing. They are listed in [§15 — Backend changes](#backend-changes-approved-exceptions).
-**Status:** The latest changes ([What's new](#whats-new-october-1619-2026)) are not committed yet.
+**Status:** The latest changes ([What's new](#whats-new-october-16-25-2026)) are not committed yet.
 
 ---
 
-## What's new (October 16–19, 2026)
+## What's new (October 16–25, 2026)
 
 | Area | Change | Details |
 |---|---|---|
 | **Guests** | The guest portal is retired. Guests now request a facility **without an account** using a public form, then follow up with a ticket code. Guest accounts can no longer sign in. | [§10](#10-guest-access-no-account) |
-| **Ticket tracker** | The landing page tracker now looks up both facility tickets (`FM-…`) and repair tickets (`RM-…`, showing Notified / Pending / Ongoing / Success / Failed), using a read-only, rate-limited lookup. | [§6.1](#61-landing-page-welcomebladephp) |
+| **Public ticket tracker (Oct 25)** | The homepage tracker checks facility requests (`FM-…`), bookings (`BKG-…`) and maintenance tickets (`RM-…`) without sign-in. Every type requires the submitter's last name; results are read-only, with existing guest receipt/PDF actions retained where allowed. The form uses a two-row desktop layout and stacks on narrow screens. | [§6.1](#61-landing-page-welcomebladephp) |
 | **Repair tickets** | College staff can type an **Others** place when the facility isn't listed. Each college repair ticket has a **live conversation** with the GSU admins, and tickets are **shared within the college** (everyone sees the team's tickets, updates and replies). | [§8](#repair-ticket-conversation-admin--college-staff) |
 | **"Noted by"** | College: the choices come from the college's **Users** team (Deans, Program Heads). Org: **required**, and must be a college **Dean** or **Program Head** (type their name), or **Someone else** (type position and name). | [§8](#new-request--purpose-signatory-and-equipment-steps-03-and-04), [§9](#9-organization-unit-portal) |
 | **All Requests order** | Requests that still need a decision are listed first: Pending, then payment to verify, then Approved, Reserved, Disapproved, Cancelled. | [§7](#7-admin-portal) |
@@ -56,7 +56,7 @@ Every page in the three staff portals (Admin, College Staff, Organization Unit),
 - One **shared sidebar and top bar** for all four portals, with a collapsible rail on desktop and a slide-in drawer on phones.
 - Each page opens with a **photo banner**, followed by **number tiles**, then the page's content as tables, cards or timelines, with color-coded **status labels**.
 - Long forms are split into **numbered steps** with a **live summary card** beside them.
-- A **ticket search** on the landing page. It looks up facility requests (FM) by ticket code and last name; see [§6.1](#61-landing-page-welcomebladephp).
+- A **public ticket tracker** on the landing page. It looks up facility requests (FM), bookings (BKG) and maintenance tickets (RM) using the tracking code and the submitter's last name, without requiring sign-in; see [§6.1](#61-landing-page-welcomebladephp).
 - Guests request facilities **without an account**; see [§10](#10-guest-access-no-account).
 
 Form field names, form actions, links, filters and pagination are unchanged. Where an input type changed (for example a dropdown became clickable cards), it still sends exactly the same name and values.
@@ -202,26 +202,20 @@ Redesigned on Oct 17 in black, white and greys (styles scoped to `.ul`, section 
 - **Kruhay Bambuhay + Staff sign in:**
   - Welcome text with a "See venue rates" link.
   - Three sign-in cards (01 Admin, 02 College Staff, 03 Org Unit). The Guest card was replaced by a wide **Guest Access** link: "Guests & partner organizations can book a venue, then track it with a ticket code. No account needed."
-- **Ticket search:** a dark band (`#track`) built around one long search bar.
-  - **The bar:** Ticket type | Ticket code | Last name | **Check status**. The type dropdown offers **Facility (FM)** or **Repair (RM)**.
+- **Ticket tracker:** a dark band (`#track`) with a responsive search card. On desktop, the request type and tracking code share the first row, with the submitter's last name and **Check status** button on the second row; on narrow screens the fields stack.
+  - No sign-in is needed. The type dropdown offers **Facility (FM)**, **Booking (BK)** and **Maintenance (RM)**. Every lookup requires the tracking code and the last name of the person who submitted the request.
   - **What the type controls:**
 
-    | | Facility (FM) | Repair (RM) |
-    |---|---|---|
-    | Example code | `FM-2026-00123` | `RM-2026-00045` |
-    | Statuses | Pending, Approved, Ongoing, Rescheduled, Cancelled | Notified, Pending, Ongoing, Success, Failed |
-    | Pop-up details | Venue, Date, Time | Facility, Subject, Sent |
-    | Second button | View calendar | Done |
+    | | Facility (FM) | Booking (BK) | Maintenance (RM) |
+    |---|---|---|---|
+    | Example code | `FM-2026-00123` | `BKG-…` | `RM-2026-00045` |
+    | Pop-up details | Status, venue, date and time | Status, venue, purpose, date and time | Status, facility, subject and sent date |
 
-  - **Checks:** the code is turned into capitals with spaces removed, and must start with the chosen prefix. Empty fields and wrong prefixes outline that part of the bar in red, with the message underneath.
-  - **Result pop-up:** a colored icon, the code, a heading per status (e.g. "Approved by GSU", "Repair in progress"), a status badge, an explanation and the details.
-  - **Facility (FM) lookup works.** The form calls `GET /track/ticket?type=FM&code=…&last_name=…` (`ticket.lookup`, `TicketLookupController`, limited to 20 requests a minute):
-    - **Ticket code:** `FM-<year submitted>-<request no., 5 digits>`, e.g. `FM-2026-00012`. It is the form submission's id, so no new code column was needed.
-    - **Last name:** must match the end of a name on the request (requester name, guest name or account name). It handles multi-word last names ("Dela Cruz") and suffixes ("Jr.", "II").
-    - **What it returns:** only status, venue, date and time. A wrong code and a wrong name give the same "not found" answer, so codes can't be guessed by name.
-    - **Rescheduled requests:** if GSU rescheduled the booking, it shows the new date and time.
-    - Too many tries shows a "busy" message (HTTP 429).
-  - **Repair (RM) lookup works (Oct 19).** Enter the repair tracking code (e.g. `RM-20261019-AB12CD`, shown on the ticket page) and the sender's last name. The pop-up shows the status — **Notified, Pending, Ongoing, Success or Failed** — with the facility (or the typed "Others" place), the subject and when it was sent. Wrong code or name gives the same "No match found".
+  - **Lookup endpoint:** the form calls `GET /track/ticket` (`ticket.lookup`, limited to 20 requests per minute), with the selected type, code and last name.
+  - **Name check:** the supplied surname must match the requester's name. Matching is case-insensitive and supports compound surnames and common suffixes. A missing surname or a non-matching code/name does not reveal the record; a wrong code and a wrong name return the same not-found result.
+  - **Privacy and actions:** results show status and relevant schedule/request details, not the requester's identity. Lookups are read-only. Approved guest facility requests retain their existing signed receipt/PDF actions where applicable; internal facility requests, bookings and maintenance tickets do not expose editing actions.
+  - **Rescheduled facility requests:** if GSU rescheduled the booking, the tracker shows its updated schedule.
+  - Too many tries show a busy message (HTTP 429).
 - **Key Facilities:**
   - A band with a centered title and description.
   - Photo cards, four at a time. Photos are grayscale and turn to color on hover.

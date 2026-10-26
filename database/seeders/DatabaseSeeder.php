@@ -34,10 +34,13 @@ class DatabaseSeeder extends Seeder
         // Placeholder signatories for testing
         $this->call(SignatorySeeder::class);
 
-        // Sample users (admins, college staff, org staff A/B/C)
+        // Sample GSU, college, and provincial organization accounts
         $this->call(SampleUsersSeeder::class);
 
         // Guest users for testing
         $this->call(GuestUserSeeder::class);
+
+        // Requests and bookings across the workflow, including one completed event.
+        $this->call(DemoReservationSeeder::class);
     }
 }

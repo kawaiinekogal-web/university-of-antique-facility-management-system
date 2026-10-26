@@ -75,7 +75,7 @@
                                         </a>
                                     @endif
                                     @if ($canDel && $user->is_active)
-                                        <form method="POST" action="{{ route($prefix . '.users.deactivate', $user) }}" onsubmit="return confirm('Deactivate {{ addslashes($user->name) }}\'s account? Future facility requests and upcoming bookings will be cancelled; past and completed activity will remain unchanged.');">
+                                        <form method="POST" action="{{ route($prefix . '.users.deactivate', $user) }}" data-confirm="Deactivate {{ $user->name }}'s account? Future facility requests and upcoming bookings will be cancelled; past and completed activity will remain unchanged." data-confirm-title="Deactivate account?" data-confirm-action="Deactivate account" data-confirm-tone="danger">
                                             @csrf
                                             @method('PATCH')
                                             <button type="submit" class="uu-act is-danger" aria-label="Deactivate {{ $user->name }}">

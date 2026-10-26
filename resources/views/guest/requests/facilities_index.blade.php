@@ -130,7 +130,7 @@
                         <span class="pk-pill {{ $toneOf($submission->status) }}">{{ $statusLabel }}</span>
                         <div class="creq-actions">
                             @if (in_array($submission->status, ['pending', 'pending_payment']))
-                                <form class="u-inline u-m-0" method="POST" action="{{ route('guest.requests.facilities.cancel', $submission) }}" onsubmit="return confirm('Cancel this request?');">
+                                <form class="u-inline u-m-0" method="POST" action="{{ route('guest.requests.facilities.cancel', $submission) }}" data-confirm="Cancel this request?" data-confirm-title="Cancel request?" data-confirm-action="Cancel request" data-confirm-tone="danger">
                                     @csrf
                                     <button type="submit" class="creq-cancel">Cancel</button>
                                 </form>

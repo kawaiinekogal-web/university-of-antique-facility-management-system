@@ -218,7 +218,7 @@
                 <section class="rqd-card rqd-cancel">
                     <h2 class="rqd-card-title">Need to change something?</h2>
                     <p class="rqd-muted">You can cancel while GSU hasn't reviewed it yet, then submit a new request.</p>
-                    <form method="POST" action="{{ $cancelUrl }}" onsubmit="return confirm('Cancel this request? This cannot be undone.');">
+                    <form method="POST" action="{{ $cancelUrl }}" data-confirm="Cancel this request? This cannot be undone." data-confirm-title="Cancel request?" data-confirm-action="Cancel request" data-confirm-tone="danger">
                         @csrf
                         <button type="submit" class="rqd-cancel-btn">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>

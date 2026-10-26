@@ -354,7 +354,7 @@
             </div>
         </div>
         <form method="POST" action="{{ route('admin.bookings.cancel', $booking) }}" class="bke-danger-form"
-              onsubmit="return confirm('Cancel this booking? This cannot be undone.');">
+              data-confirm="Cancel this booking? This cannot be undone." data-confirm-title="Cancel booking?" data-confirm-action="Cancel booking" data-confirm-tone="danger">
             @csrf
             <div class="pk-field">
                 <label class="pk-label" for="cancel_reason">Cancellation reason</label>

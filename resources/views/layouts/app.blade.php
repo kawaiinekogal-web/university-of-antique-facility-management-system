@@ -6,10 +6,9 @@
     <title>@yield('title', config('app.name', 'UA Facility Management System'))</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
-    <!-- Load all styles at once to prevent Cloudflare rate limiting -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&family=Inter:wght@400;500;600;700&family=Merriweather:wght@700;900&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&family=Inter:wght@400;500;600;700&family=Merriweather:wght@700;900&display=swap"></noscript>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="min-h-screen bg-white text-black antialiased">
 <div class="flex min-h-screen flex-col">
@@ -27,6 +26,8 @@
             @yield('content')
         </div>
     </main>
+
+    @include('layouts.partials.confirmation-dialog')
 
     @if (request()->is('/'))
     <footer class="site-footer">

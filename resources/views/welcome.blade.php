@@ -170,24 +170,21 @@ document.addEventListener('DOMContentLoaded', function () {
 <section class="ua-track-section" id="track" aria-labelledby="ua-track-title">
   <div class="ua-track-inner">
     <div class="ua-track-copy">
-      <h2 id="ua-track-title">Searching for your ticket?</h2>
-      @if (auth()->check())
-        <p>Enter a ticket code to check a request linked to your signed-in account.</p>
-      @else
-        <p>Guests can check a facility request with its code and last name. Staff must sign in to look up requests by code.</p>
-      @endif
+      <h2 id="ua-track-title">Track a request or booking</h2>
+      <p>No sign-in needed. Enter the tracking code and the last name of the person who submitted the request to view its status.</p>
     </div>
 
-    <form class="ua-track-form" id="ua-track-form" novalidate data-endpoint="{{ route('ticket.lookup') }}" role="search" aria-label="Ticket status">
+    <form class="ua-track-form" id="ua-track-form" novalidate data-endpoint="{{ route('ticket.lookup') }}" role="search" aria-label="Request, booking, or maintenance status">
       <div class="ua-track-bar">
         <div class="ua-track-seg ua-track-seg--type" data-for="ua-track-type">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
           <div class="ua-track-seg-text">
-            <label for="ua-track-type">Ticket type</label>
+            <label for="ua-track-type">Request type</label>
             <div class="ua-track-select">
               <select id="ua-track-type" name="type">
                 <option value="FM" title="Facility request">Facility (FM)</option>
-                <option value="RM" title="Repair &amp; maintenance">Repair (RM)</option>
+                <option value="BK" title="Facility booking">Booking (BKG)</option>
+                <option value="RM" title="Repair &amp; maintenance">Maintenance (RM)</option>
               </select>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             </div>
@@ -196,19 +193,17 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="ua-track-seg" data-for="ua-track-code">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3a2 2 0 000-4z"/></svg>
           <div class="ua-track-seg-text">
-            <label for="ua-track-code">Ticket code</label>
-            <input id="ua-track-code" name="code" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="24" placeholder="FM-2026-00123" aria-describedby="ua-track-code-err">
+            <label for="ua-track-code">Tracking code</label>
+            <input id="ua-track-code" name="code" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="48" placeholder="FM-2026-00123" aria-describedby="ua-track-code-err">
           </div>
         </div>
-        @guest
-          <div class="ua-track-seg" data-for="ua-track-last">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
-            <div class="ua-track-seg-text">
-              <label for="ua-track-last">Guest last name</label>
-              <input id="ua-track-last" name="last_name" type="text" autocomplete="family-name" maxlength="60" placeholder="Dela Cruz" aria-describedby="ua-track-last-err" required>
-            </div>
+        <div class="ua-track-seg" data-for="ua-track-last">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+          <div class="ua-track-seg-text">
+            <label for="ua-track-last">Requester&rsquo;s last name</label>
+            <input id="ua-track-last" name="last_name" type="text" autocomplete="family-name" maxlength="60" placeholder="Name of the person who submitted it" aria-describedby="ua-track-last-err" required>
           </div>
-        @endguest
+        </div>
         <button type="submit" class="ua-track-submit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
           Check status
@@ -233,6 +228,12 @@ document.addEventListener('DOMContentLoaded', function () {
           <li style="--dot:#60A5FA">Ongoing</li>
           <li style="--dot:#34D399">Success</li>
           <li style="--dot:#F87171">Failed</li>
+        </ul>
+        <ul class="ua-track-legend" data-kind="BK" aria-label="Booking statuses" hidden>
+          <li style="--dot:#60A5FA">Reserved</li>
+          <li style="--dot:#4338CA">Rescheduled</li>
+          <li style="--dot:#34D399">Completed</li>
+          <li style="--dot:#94A3B8">Cancelled</li>
         </ul>
         <p class="ua-track-hint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
@@ -269,8 +270,9 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
       <div class="ua-tr-actions">
         <button type="button" class="ua-tr-secondary" data-close autofocus>Search again</button>
-        <a href="#calendar" class="ua-tr-primary" data-close data-kind="FM">View calendar</a>
+          <a href="#calendar" class="ua-tr-primary" data-close data-kind="FM">View calendar</a>
         <button type="button" class="ua-tr-primary" data-close data-kind="RM" hidden>Done</button>
+          <button type="button" class="ua-tr-primary" data-close data-kind="BK" hidden>Done</button>
       </div>
     </div>
   </dialog>
@@ -283,7 +285,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!form || !dialog) return;
   const codeInput = document.getElementById('ua-track-code');
   const lastInput = document.getElementById('ua-track-last');
-  const lastNameRequired = !!lastInput;
   const typeSelect = document.getElementById('ua-track-type');
   const $ = (id) => document.getElementById(id);
 
@@ -298,16 +299,16 @@ document.addEventListener('DOMContentLoaded', function () {
     bell:   '<path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 003.4 0"/>',
     wrench: '<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'
   };
-  // Status sets per ticket type. FM = facility request, RM = repair & maintenance.
+  // Status sets per request type. FM = facility request, BK = booking, RM = repair & maintenance.
   const common = {
-    notfound: { label: 'No match found', tone: '#475569', bg: '#F1F5F9', icon: 'search', msg: 'No matching ticket was found. Check the code and, for guest requests, the last name.' },
+    notfound: { label: 'No match found', tone: '#475569', bg: '#F1F5F9', icon: 'search', msg: 'No matching request or booking was found. Check the tracking code and the last name of the person who submitted it.' },
     busy:     { label: 'Too many searches', tone: '#475569', bg: '#F1F5F9', icon: 'clock', msg: 'Please wait a minute, then try again.' },
-    offline:  { label: 'Lookup not available yet', tone: '#475569', bg: '#F1F5F9', icon: 'plug', msg: 'Online status tracking isn’t connected yet. Sign in to your portal to see your request, or contact the GSU office.' }
+    offline:  { label: 'Lookup not available yet', tone: '#475569', bg: '#F1F5F9', icon: 'plug', msg: 'Online status tracking isn’t available right now. Please try again or contact the GSU office.' }
   };
   const kinds = {
     FM: {
       name: 'Facility request', example: 'FM-2026-00123',
-      hint: 'Facility tickets start with <code>FM</code> — find yours on your request confirmation.',
+      hint: 'Enter the tracking code and the last name of the person who submitted the request.',
       states: {
         pending:     { title: 'Waiting for review', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'Your request was received and is waiting for GSU review.' },
         pending_payment: { title: 'Payment being verified', label: 'Pending payment', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'GSU is checking your payment receipt before reviewing the request.' },
@@ -321,13 +322,25 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     RM: {
       name: 'Repair & maintenance', example: 'RM-20261019-AB12CD',
-      hint: 'Repair tickets start with <code>RM</code> — find yours on your repair request.',
+      hint: 'Enter the code and the last name of the person who submitted the maintenance request.',
       states: {
         notified: { title: 'Admins notified', label: 'Notified', tone: '#475569', bg: '#F1F5F9', icon: 'bell', msg: 'Your repair request reached the facility administrators and is waiting to be scheduled.' },
         pending:  { title: 'Waiting to start', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'Your repair is queued and will start once a team is assigned.' },
         ongoing:  { title: 'Repair in progress', label: 'Ongoing', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'wrench', msg: 'The maintenance team is working on it now.' },
         success:  { title: 'Repair completed', label: 'Success', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'The repair was completed successfully.' },
         failed:   { title: 'Repair not completed', label: 'Failed', tone: '#B91C1C', bg: '#FEF2F2', icon: 'x', msg: 'The repair couldn’t be completed. GSU will contact you about next steps, or you can send a new request.' }
+      }
+    },
+    BK: {
+      name: 'Facility booking', example: 'BKG-20261025173245-11-ABC123',
+      hint: 'Enter the booking code and the last name of the person who made the booking.',
+      states: {
+      pending:     { title: 'Booking awaiting confirmation', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'This booking is waiting for confirmation. See the requested details below.' },
+      reserved:    { title: 'Booking reserved', label: 'Reserved', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'check', msg: 'This reservation is confirmed. See the booking details below.' },
+      booked:      { title: 'Booking reserved', label: 'Reserved', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'check', msg: 'This reservation is confirmed. See the booking details below.' },
+        rescheduled: { title: 'Booking rescheduled', label: 'Rescheduled', tone: '#4338CA', bg: '#EEF2FF', icon: 'swap', msg: 'This reservation was moved to a new date or time. See the updated details below.' },
+        completed:   { title: 'Booking completed', label: 'Completed', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'This reservation has been completed.' },
+        cancelled:   { title: 'Booking cancelled', label: 'Cancelled', tone: '#475569', bg: '#F1F5F9', icon: 'x', msg: 'This reservation was cancelled.' }
       }
     }
   };
@@ -340,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function () {
     dialog.style.setProperty('--tone', s.tone);
     dialog.style.setProperty('--tone-bg', s.bg);
     $('ua-tr-badge').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + icons[s.icon] + '</svg>';
-    $('ua-tr-type').textContent = kinds[kind].name + ' ticket';
+    $('ua-tr-type').textContent = kind === 'BK' ? kinds[kind].name : kinds[kind].name + ' ticket';
     $('ua-tr-code').textContent = result.code || '';
     $('ua-tr-status').textContent = isStatus ? s.title : s.label;
     $('ua-tr-pill').textContent = s.label;
@@ -357,7 +370,13 @@ document.addEventListener('DOMContentLoaded', function () {
     $('ua-tr-msg').textContent = message;
     const rows = (kind === 'RM'
       ? [['Facility', result.venue], ['Subject', result.subject], ['Sent', result.sent]]
-      : [['Venue', result.venue], ['Date', result.date], ['Time', result.time], ['Payment', result.payment_status && result.payment_status.replaceAll('_', ' ')] ]).filter(r => r[1]);
+      : [
+          ['Venue', result.venue],
+          ...(kind === 'BK' ? [['Purpose', result.purpose]] : []),
+          ['Date', result.date],
+          ['Time', result.time],
+          ...(kind === 'FM' && result.payment_status ? [['Payment', result.payment_status.replaceAll('_', ' ')]] : [])
+        ]).filter(r => r[1]);
     dialog.querySelectorAll('.ua-tr-actions [data-kind]').forEach(el => { el.hidden = el.dataset.kind !== kind; });
     const dl = $('ua-tr-details');
     dl.innerHTML = '';
@@ -438,19 +457,31 @@ document.addEventListener('DOMContentLoaded', function () {
     const code = codeInput.value.trim().toUpperCase();
     const last = lastInput ? lastInput.value.trim() : '';
     const kind = typeSelect.value, k = kinds[kind];
+    const codePatterns = {
+      FM: /^FM-\d{4}-\d{1,10}$/,
+      BK: /^BKG-[A-Z0-9-]{10,40}$/,
+      RM: /^RM-[A-Z0-9-]{3,40}$/
+    };
     const codeOk = setError(codeInput, 'ua-track-code-err',
-      !code ? 'Enter your ticket code.' : (!new RegExp('^' + kind + '[-A-Z0-9]{3,}$').test(code) ? k.name + ' tickets start with ' + kind + ', e.g. ' + k.example + '.' : ''));
-    const lastOk = !lastNameRequired || setError(lastInput, 'ua-track-last-err', !last ? 'Enter your last name.' : '');
+      !code ? 'Enter your tracking code.' : (!codePatterns[kind].test(code) ? 'Enter a valid ' + k.name.toLowerCase() + ' code, e.g. ' + k.example + '.' : ''));
+    const lastOk = setError(lastInput, 'ua-track-last-err', !last ? 'Enter the requester’s last name.' : '');
     if (!codeOk) { codeInput.focus(); return; }
     if (!lastOk) { lastInput.focus(); return; }
 
     const endpoint = form.dataset.endpoint;
     if (!endpoint) { window.uaShowTicketResult({ kind: kind, status: 'offline', code: code }); return; }
     const params = new URLSearchParams({ type: kind, code: code });
-    if (last) params.set('last_name', last);
+    params.set('last_name', last);
     fetch(endpoint + '?' + params, { headers: { Accept: 'application/json' } })
       .then(r => r.ok ? r.json() : (r.status === 429 ? { status: 'busy' } : { status: 'notfound' }))
-      .then(data => window.uaShowTicketResult(Object.assign({ kind: kind, code: code }, data)))
+      .then(data => {
+        if (data.status === 'needs_last_name' && lastInput) {
+          setError(lastInput, 'ua-track-last-err', 'Enter the requester’s last name.');
+          lastInput.focus();
+          return;
+        }
+        window.uaShowTicketResult(Object.assign({ kind: kind, code: code }, data));
+      })
       .catch(() => window.uaShowTicketResult({ kind: kind, status: 'offline', code: code }));
   });
 
