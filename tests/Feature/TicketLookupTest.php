@@ -191,6 +191,63 @@ class TicketLookupTest extends TestCase
         );
     }
 
+    public function test_college_request_can_be_approved_booked_and_tracked_without_sign_in(): void
+    {
+        $notifications = \Mockery::mock(NotificationService::class);
+        $notifications->shouldReceive('notifyFormSubmitted')->once();
+        $notifications->shouldReceive('notifyAdmins')->once();
+        $notifications->shouldReceive('notifyBookingCreated')->once();
+        $notifications->shouldReceive('notifyFormApproved')->once();
+        $this->app->instance(NotificationService::class, $notifications);
+
+        $collegeUser = $this->user('college_staff', 'CCIS');
+        $collegeUser->name = 'Maria Jo Dela Cruz';
+        $collegeUser->last_name = 'Dela Cruz';
+        $collegeUser->save();
+        $facility = Facility::create([
+            'name' => 'College Booking Test Hall',
+            'location' => 'Test Campus',
+            'owner_type' => 'gsu',
+            'is_active' => true,
+            'availability_status' => 'available',
+        ]);
+
+        $this->actingAs($collegeUser)
+            ->post('/college/requests/facilities', [
+                'date_activity' => now()->addDays(40)->toDateString(),
+                'start_time' => '13:00',
+                'end_time' => '14:00',
+                'facility_ids' => [$facility->id],
+                'purpose' => 'Successful college booking test',
+            ])
+            ->assertRedirect(route('college.dashboard'));
+
+        $submission = FormSubmission::where('requester_id', $collegeUser->id)
+            ->where('type', 'facilities_utilization')
+            ->latest('id')
+            ->firstOrFail();
+        $this->assertSame('Dela Cruz', $submission->payload['requester_last_name']);
+        $this->assertSame('pending', $submission->status);
+
+        $admin = $this->user('admin');
+        $this->actingAs($admin)
+            ->post('/admin/forms/facilities/' . $submission->id . '/approve')
+            ->assertRedirect(route('admin.forms.facilities.index'));
+
+        $booking = Booking::where('requester_id', $collegeUser->id)->firstOrFail();
+        $this->assertSame('reserved', $submission->fresh()->status);
+        $this->assertSame('reserved', $booking->status);
+
+        auth()->logout();
+        $this->getJson('/track/ticket?type=BK&code=' . $booking->booking_code . '&last_name=Dela%20Cruz')
+            ->assertOk()
+            ->assertJsonPath('code', $booking->booking_code)
+            ->assertJsonPath('status', 'reserved')
+            ->assertJsonMissingPath('requester_name');
+        $this->getJson('/track/ticket?type=BK&code=' . $booking->booking_code . '&last_name=Cruz')
+            ->assertNotFound();
+    }
+
     public function test_guest_booking_lookup_requires_the_requesters_last_name(): void
     {
         $guest = $this->user('guest');
