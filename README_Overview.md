@@ -1,88 +1,23 @@
-# Laravel Form Filler – UA GSU Forms
+# UA-FMS project overview
 
-Fill the official `.docx` templates with submitted form data and download as PDF.
+The University of Antique Facility Management System is a Laravel web application for facility utilization requests, reservations, repair/maintenance coordination, and public status tracking.
 
-## Requirements
+## User groups
 
-```bash
-composer require phpoffice/phpword
-```
+- **Public visitors and guests:** view the public calendar, submit facility requests without an account, and track facility requests, bookings, or repair tickets without signing in.
+- **GSU administrators:** manage facilities and users, review requests, manage reservations, and update maintenance tickets.
+- **College staff:** manage eligible college facilities, submit utilization and repair requests, and follow their unit's activity.
+- **Organization staff:** submit utilization and repair requests and view their own requests and reservations.
 
-LibreOffice must be installed on the server for DOCX → PDF conversion:
-```bash
-# Ubuntu/Debian
-sudo apt install libreoffice
+## Important workflows
 
-# Or on shared hosting: use a service like CloudConvert API instead
-```
+- Facility requests progress through review and approval. On approval, the system checks availability and overlapping reservations before creating a reservation.
+- Repair and maintenance tickets use `RM-…` tracking codes and statuses including notified, pending, ongoing, success, and failed.
+- The public tracker requires the tracking code and the submitter's last name. New request data stores the last name explicitly, separately from the full name; legacy data without that field retains the legacy matcher.
+- College repair tickets are visible across the college team and support a conversation with GSU. Organization tickets are visible to their requester and GSU.
 
-## Setup
+## Technology
 
-1. Copy the two template files into `storage/app/templates/`:
-   - `FACILITIES-AND-UTILIZATION-FORM-TEMPLATE.docx`
-   - `REPAIR-AND-MAINTENANCE-FORM-TEMPLATE.docx`
+PHP 8.2+, Laravel 12, MySQL, Eloquent, Blade, Tailwind CSS 4, and Vite. Official forms are generated from DOCX templates; see [FORMS/FORMREADME.md](FORMS/FORMREADME.md).
 
-2. Copy the controller into `app/Http/Controllers/`
-
-3. Add routes in `routes/web.php`:
-```php
-use App\Http\Controllers\GsuFormController;
-
-Route::get('/forms/facilities', [GsuFormController::class, 'showFacilities']);
-Route::post('/forms/facilities/download', [GsuFormController::class, 'downloadFacilities']);
-
-Route::get('/forms/repair', [GsuFormController::class, 'showRepair']);
-Route::post('/forms/repair/download', [GsuFormController::class, 'downloadRepair']);
-```
-
-## Placeholder Reference
-
-### Facilities Form
-| Placeholder | Field |
-|---|---|
-| `${control_no}` | Control Number |
-| `${date_request}` | Date of Request |
-| `${requester_name}` | Requester Name & Signature |
-| `${requester_contact}` | Contact Number |
-| `${date_activity}` | Date of Activity |
-| `${time_activity}` | Time of Activity |
-| `${purpose}` | Purpose |
-| `${venues_selected}` | Comma-separated list of selected venues |
-| `${venue_others}` | "Others – please specify" text |
-| `${qty_table}` | Quantity: Table |
-| `${qty_fan}` | Quantity: Electric Fan |
-| `${qty_rostrum}` | Quantity: Rostrum |
-| `${qty_flag}` | Quantity: Flag & School Color |
-| `${qty_sound}` | Quantity: Sound |
-| `${qty_led}` | Quantity: LED Wall |
-| `${req_name}` | Name of Requisitioner |
-| `${req_datetime}` | Requisitioner Date and Time |
-| `${noted_name}` | Name of Head of Office |
-| `${noted_datetime}` | Head of Office Date and Time |
-| `${approved_name}` | Name of GSU Person in Charge |
-| `${approved_datetime}` | GSU Person Date and Time |
-
-### Repair & Maintenance Form
-| Placeholder | Field |
-|---|---|
-| `${control_no}` | Control Number |
-| `${date_request}` | Date of Request |
-| `${requester_name}` | Requester Name & Signature |
-| `${department}` | Department / Office |
-| `${requester_contact}` | Contact Number |
-| `${repair_location}` | Maintenance / Repair Location |
-| `${cb_inperson}` | `[✓]` or `[ ]` for In-person |
-| `${cb_phone}` | `[✓]` or `[ ]` for Phone |
-| `${cb_maintenance}` | `[✓]` or `[ ]` for Maintenance |
-| `${cb_repair}` | `[✓]` or `[ ]` for Repair |
-| `${cb_other_services}` | `[✓]` or `[ ]` for Other Services |
-| `${problem_description}` | Problem description / work details |
-| `${cb_approved}` | `[✓]` or `[ ]` for Approved |
-| `${cb_disapproved}` | `[✓]` or `[ ]` for Disapproved |
-| `${preferred_time}` | Preferred time for maintenance/repair |
-| `${gsu_personnel}` | Assigned GSU Personnel name |
-| `${worker_name}` | Maintenance Worker Name |
-| `${worker_datetime}` | Maintenance Worker Date and Time |
-| `${remarks}` | Actual Work Done |
-| `${enduser_name}` | End-user Name |
-| `${enduser_datetime}` | End-user Date and Time |
+See [README.md](README.md) for setup, [fdd.md](fdd.md) for user-facing behavior, [tech-stack-architecture-erd.md](tech-stack-architecture-erd.md) for the architecture, and [TESTING_GUIDE.md](TESTING_GUIDE.md) for verification.

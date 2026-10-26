@@ -1,188 +1,60 @@
-# Quick Test Guide - UA-FMS New Features
+# Testing Guide — UA Facility Management System
 
-## Start the Server
-Open a new terminal and run:
+## Automated test suite
+
+Run the full Laravel suite from the repository root:
+
+```bash
+php artisan test
+```
+
+Tests use the configured test environment. Ensure the test database is isolated from any database containing data you need to preserve.
+
+Relevant feature coverage includes:
+
+- Facility request validation, multi-facility/date reservations, and overlap prevention.
+- Public tracking of FM facility requests, BKG bookings, and RM repair/maintenance tickets.
+- Exact explicit tracking-last-name matching, rejection of partial surnames, and legacy lookup behavior.
+- Guest booking approval, booking creation, signed-out tracking, and the explicit surname in guest email.
+- College request submission, administrator approval, booking creation, and signed-out tracking.
+- Private payment receipt and supporting attachment authorization and validation.
+
+## Manual smoke test
+
+Start the application and visit `http://127.0.0.1:8000`:
+
 ```bash
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-Then visit: http://127.0.0.1:8000
+### Public and guest flow
 
-## ✅ Feature 0: Public Request, Booking & Maintenance Tracker
+1. Confirm the homepage displays the public reservation calendar and status tracker.
+2. Open `/request-facility` and submit a test request with a full name and a separately entered tracking last name.
+3. Note the `FM-…` code on the confirmation and use the code plus the exact last name in the homepage tracker.
+4. Confirm no sign-in is required and an incorrect or partial surname does not return the record.
+5. After GSU approval, confirm any guest PDF or payment actions appear only when applicable.
 
-The homepage tracker is public; no account or sign-in is needed. For new accounts/requests, use the exact separate tracking last name recorded for the submitter; it is not inferred from their full name. Legacy records without an explicit value continue using the older matching rule.
+### College and organization flows
 
-1. Open the homepage and scroll to **Track a request or booking**.
-2. Confirm the form has a request type, tracking code, submitter's last name, and **Check status** button. The last-name field is required.
-3. Test each type using an existing test record:
-   - **Facility (FM):** `FM-<submission year>-<submission number>`.
-   - **Booking (BK):** use the booking's `BKG-…` reference.
-   - **Maintenance (RM):** use the repair ticket's `RM-…` code.
-4. Enter the submitter's last name and check the status.
-5. **Expected:** the result shows the record's status and relevant details without exposing the submitter's identity. No sign-in is requested, and staff facility requests, bookings, and maintenance results have no edit controls.
-6. Retry with a wrong last name and with a missing last name.
-   - **Expected:** a wrong name does not disclose the record (it displays the same not-found result as an invalid code); a missing surname prompts for the required name.
-7. If testing an approved guest facility request, verify that its existing receipt/PDF actions appear only when applicable.
-8. Check the form at desktop and phone widths.
-   - **Expected:** fields are readable and do not clip; the desktop layout uses two rows and the narrow layout stacks the fields.
+1. Sign in using an isolated seeded/test account for the intended role.
+2. Confirm the account has an explicit last name in its profile.
+3. Submit a facility request and verify the saved request's tracker uses that account value.
+4. Submit a repair/maintenance ticket, note its `RM-…` code, and test signed-out lookup using the account's exact tracking last name.
+5. For college tickets, verify team visibility and the conversation with GSU.
 
-## Test Accounts
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | adminA@example.com | Use locally configured test credentials |
-| College Staff | college@ccis.com | Use locally configured test credentials |
-| Org Staff | orgA@example.com | Use locally configured test credentials |
+### GSU review and reservation
 
----
+1. Sign in as an administrator and open the facilities request queue.
+2. Approve a valid pending request.
+3. Confirm the request transitions to reserved and a booking is created only if facilities are available and no overlapping reservation exists.
+4. Check the resulting booking from the public tracker using the booking code and the correct submitter last name.
+5. Open the maintenance ticket queue, update a test ticket's status/remarks, and confirm the expected in-app notifications.
 
-## ✅ Feature 1: Dashboard Charts
+## Manual UI verification
 
-### Test Admin Dashboard
-1. Login as: `adminA@example.com` using locally configured test credentials.
-2. Go to: http://127.0.0.1:8000/admin/dashboard
-3. **Expected**: See two charts:
-   - Pie chart for "Facilities Requests Overview"
-   - Bar chart for "Repair & Maintenance Overview"
+For UI changes, use Playwright to inspect the affected page at desktop and narrow/mobile widths. Check form labels, validation feedback, status text, and whether content overflows or clips.
 
-### Test College Dashboard
-1. Login as: `college@ccis.com` using locally configured test credentials.
-2. Go to: http://127.0.0.1:8000/college/dashboard
-3. **Expected**: See two charts showing YOUR requests only
+## Data safety
 
-### Test Org Dashboard
-1. Login as: `orgA@example.com` using locally configured test credentials.
-2. Go to: http://127.0.0.1:8000/org/dashboard
-3. **Expected**: See two charts showing YOUR requests only
-
----
-
-## ✅ Feature 2: Org Staff Maintenance Tickets
-
-### Create a Repair Request (Org)
-1. Login as: `orgA@example.com` using locally configured test credentials.
-2. Click "Maintenance" → "New repair request" in sidebar
-3. OR visit: http://127.0.0.1:8000/org/maintenance-requests/create
-4. Fill in:
-   - Facility: Choose any
-   - Subject: "Broken chair"
-   - Message: "The chair in the office is broken"
-5. Click "Send request"
-6. **Expected**: Success message with tracking code (e.g., RM-20261008-ABC123)
-
-### View Your Repair Requests (Org)
-1. Click "My repair requests" in sidebar
-2. OR visit: http://127.0.0.1:8000/org/maintenance-requests
-3. **Expected**: See list of your tickets with tracking codes
-
-### Admin Views Org Repair Request
-1. Logout, then log in as `adminA@example.com` using locally configured test credentials.
-2. Go to: http://127.0.0.1:8000/admin/maintenance-tickets
-3. **Expected**: See the ticket from orgA in the list
-
----
-
-## ✅ Feature 3: Payment Upload & Verification
-
-### Upload Payment Receipt (Public Guest)
-1. Open: http://127.0.0.1:8000/request-facility
-2. Fill in the applicant, event date/time, venue, and purpose fields.
-3. In Documents, upload a JPG/JPEG, PNG, or PDF receipt no larger than 10MB.
-4. Submit the request.
-5. **Expected**: Request succeeds and shows the ticket page; submitting without a receipt, with a different file type, or with any file over 10 MiB is rejected. Optional supporting documents accept up to 10 JPG/JPEG, PNG, or PDF files.
-
-### Verify Payment (Admin)
-1. Logout, then log in as `adminA@example.com` using locally configured test credentials.
-2. Go to: http://127.0.0.1:8000/admin/forms/facilities
-3. Find the request you just created (Status: "Pending Payment")
-4. Click "View" or visit the submission detail page
-5. **Expected**: See "Payment Information" section with:
-   - Payment Status: "Awaiting Verification"
-   - Link to download the receipt
-6. Click the receipt link. It should download through the authorized route and not expose a `/storage/` public URL.
-7. Click "Verify Payment" button
-8. **Expected**: Success message, status changes to "Verified"
-
-### Approve After Payment Verification
-1. Still on the same page as admin
-2. **Expected**: Now you can see "Approve" and "Disapprove" buttons
-3. Click "Approve"
-4. **Expected**: Request approved successfully
-
-### Test Payment Required Validation
-1. Try to approve a request with "Pending Payment" status WITHOUT verifying payment first
-2. **Expected**: Error message: "Please verify the payment attachment before approving this request."
-
----
-
-## ✅ Feature 4: Repair Form PDF Generation (Fixed)
-
-### Generate Repair Form PDF
-1. Login as: `adminA@example.com` using locally configured test credentials.
-2. Go to: http://127.0.0.1:8000/forms/repair
-3. Fill in the form with test data
-4. Click "Generate PDF Form"
-5. **Expected**: PDF downloads successfully (no template error)
-
----
-
-## Common Issues & Solutions
-
-### Issue: Charts not showing
-**Solution**: Make sure Chart.js loaded. Check browser console for errors.
-
-### Issue: Payment upload not working
-**Solution**: 
-1. Check that `PAYMENT_RECEIPTS_PATH` exists, or create the default `storage/app/private/payment-receipts` directory.
-2. Ensure the PHP-FPM user owns the directory and can write to it.
-3. Check PHP `upload_max_filesize`/`post_max_size` and Nginx `client_max_body_size`; see the Local payment receipt storage section in `DEPLOYMENT_GUIDE.md`.
-
-### Issue: Template error on repair form
-**Solution**: Already fixed! Templates are in `storage/app/templates/`
-
-### Issue: Routes not found
-**Solution**: 
-```bash
-php artisan route:clear
-php artisan config:clear
-php artisan cache:clear
-```
-
----
-
-## Database Check Commands
-
-### View payment-enabled requests:
-```bash
-mysql -u root facility_management -e "SELECT id, status, payment_status, payment_attachment FROM form_submissions WHERE payment_attachment IS NOT NULL;"
-```
-
-### View all maintenance tickets:
-```bash
-mysql -u root facility_management -e "SELECT id, ticket_code, status, requester_id FROM maintenance_tickets ORDER BY created_at DESC LIMIT 10;"
-```
-
-### Check dashboard stats:
-```bash
-mysql -u root facility_management -e "SELECT status, COUNT(*) as count FROM form_submissions WHERE type='facilities_utilization' GROUP BY status;"
-```
-
----
-
-## Summary of URLs
-
-| Feature | URL |
-|---------|-----|
-| Admin Dashboard | http://127.0.0.1:8000/admin/dashboard |
-| College Dashboard | http://127.0.0.1:8000/college/dashboard |
-| Org Dashboard | http://127.0.0.1:8000/org/dashboard |
-| Org Maintenance (Create) | http://127.0.0.1:8000/org/maintenance-requests/create |
-| Org Maintenance (List) | http://127.0.0.1:8000/org/maintenance-requests |
-| Admin Approve Requests | http://127.0.0.1:8000/admin/forms/facilities |
-| Admin Maintenance Tickets | http://127.0.0.1:8000/admin/maintenance-tickets |
-| College New Request | http://127.0.0.1:8000/college/requests/facilities/create |
-| Org New Request | http://127.0.0.1:8000/org/requests/facilities/create |
-| Repair Form (Admin) | http://127.0.0.1:8000/forms/repair |
-
----
-
-**All features are now implemented and ready to test!**
+Use disposable records and an isolated development database for manual checks. Do not run seeders or destructive test workflows against production data. Keep local uploads and test artifacts out of commits.

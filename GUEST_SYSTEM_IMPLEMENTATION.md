@@ -1,128 +1,28 @@
-# Guest User System - Implementation Complete
+# Public Guest Request Workflow
 
-## Overview
-Guest users are external organizations/individuals who can login, submit facility requests with payment, view the calendar, and track their bookings.
+## Current behavior
 
-## Features Implemented
+Guests and community partners do not sign in or create accounts. They submit facility requests through the public form at `/request-facility`. The system files each submission under a non-interactive walk-in account and stores the visitor's actual details—including full name and explicitly entered tracking last name—in that submission's payload.
 
-### 1. Guest Controllers
-- **GuestDashboardController** - Shows statistics and charts for the guest's own requests
-- **GuestFormController** - Handles facility request submission with payment upload (required)
-- **GuestBookingController** - Shows guest's approved bookings and public calendar view
+The tracking last name is a separate value. It is not inferred by splitting the visitor's full name. The confirmation page and tracking email provide the facility request code (`FM-…`); the visitor uses that code and the exact tracking last name on the homepage.
 
-### 2. Routes (routes/web.php)
-All routes are protected by `auth` and `role:guest` middleware:
-- `/guest/dashboard` - Guest dashboard
-- `/guest/requests/facilities` - Create, view, and cancel requests
-- `/guest/bookings` - View approved bookings
-- `/guest/calendar` - View public calendar
+## Review, booking, and payment
 
-### 3. Views
-Created in `resources/views/guest/`:
-- `layouts/guest.blade.php` - Guest layout with navigation
-- `dashboard.blade.php` - Dashboard with pie chart showing request statuses
-- `requests/facilities_create.blade.php` - Request form (payment required)
-- `requests/facilities_index.blade.php` - List of guest's requests
-- `requests/facilities_show.blade.php` - Single request details
-- `bookings/index.blade.php` - List of approved bookings
-- `bookings/calendar.blade.php` - Public calendar view
+GSU staff review and approve or disapprove the request. Approval attempts to reserve the requested facility and time; the booking service checks availability and conflicts before committing the reservation. Where payment is applicable, the public tracker can provide a temporary signed receipt-upload action after approval. Approved guest requests may also receive a temporary signed form download link.
 
-### 4. Database
-- Added `organization_name` field to users table (already existed)
-- Guest role: `'guest'`
+## Privacy and access
 
-### 5. Authentication & Authorization
-- Added `isGuest()` method to User model
-- Updated AuthController to redirect guests to `guest.dashboard`
-- RoleMiddleware already supports the guest role
+- Guest submissions use `requester_type=guest` and are linked to the walk-in system account.
+- Visitor identity, contact details, and the explicit tracking surname are saved on the request, not on the shared walk-in account.
+- Status lookup does not require sign-in and does not expose requester identity.
+- Guest accounts and the former sign-in guest portal are not the current guest workflow. Legacy `/guest/...` URLs redirect to the public request flow.
 
-### 6. Payment Requirement
-- Guest facility requests **require** payment attachment upload
-- Payment status workflow: `payment_uploaded` → verified by admin → approved
-- Guests can see payment verification status in their request details
+## Related implementation
 
-### 7. Test Users Created
-```
-Email: guest@example.com
-Password: password123
-Organization: External Organization
+- `app/Http/Controllers/PublicFacilityRequestController.php`
+- `app/Http/Controllers/TicketLookupController.php`
+- `app/Http/Controllers/Traits/SubmitsFacilitiesForm.php`
+- `app/Services/GuestRequestEmailService.php`
+- `tests/Feature/TicketLookupTest.php`
 
-Email: guest2@example.com
-Password: password123
-Organization: Community Partner
-```
-
-## Testing Instructions
-
-1. **Login as Guest**
-   - Navigate to http://127.0.0.1:8000/login
-   - Email: `guest@example.com`
-   - Password: `password123`
-
-2. **Create Request**
-   - Click "New Request" from dashboard
-   - Fill in activity date, time, venue, purpose, equipment
-   - Upload payment receipt (JPG/PNG/PDF, required)
-   - Submit
-
-3. **Track Request**
-   - View "My Requests" to see status
-   - Request will show "Pending Payment" status
-   - Admin must verify payment before approval
-
-4. **View Calendar**
-   - Click "Calendar" to see all facility bookings
-   - Public view shows all reserved facilities
-
-5. **View Bookings**
-   - Once request is approved, it appears in "My Bookings"
-   - Shows booking code, date, time, facility, status
-
-## Key Differences from College/Org Users
-
-| Feature | College/Org Staff | Guest Users |
-|---------|-------------------|-------------|
-| Payment | Optional | **Required** |
-| Signatories | Select from database | Enter custom name |
-| Access | Full system features | Request + View only |
-| Organization | Stored in college_id | Stored in organization_name |
-| Dashboard | All stats | Own requests only |
-
-## Files Modified/Created
-
-### Controllers
-- `app/Http/Controllers/Guest/DashboardController.php` (new)
-- `app/Http/Controllers/Guest/FormController.php` (new)
-- `app/Http/Controllers/Guest/BookingController.php` (new)
-- `app/Http/Controllers/AuthController.php` (updated)
-
-### Views
-- `resources/views/layouts/guest.blade.php` (new)
-- `resources/views/guest/dashboard.blade.php` (new)
-- `resources/views/guest/requests/facilities_create.blade.php` (new)
-- `resources/views/guest/requests/facilities_index.blade.php` (new)
-- `resources/views/guest/requests/facilities_show.blade.php` (new)
-- `resources/views/guest/bookings/index.blade.php` (new)
-- `resources/views/guest/bookings/calendar.blade.php` (new)
-
-### Models & Database
-- `app/Models/User.php` (added isGuest() method)
-- `database/migrations/2026_10_08_183233_add_guest_role_and_organization_field_to_users_table.php` (new)
-- `database/seeders/GuestUserSeeder.php` (new)
-- `database/seeders/DatabaseSeeder.php` (updated)
-
-### Routes
-- `routes/web.php` (added guest routes section)
-
-## Next Steps (Optional Enhancements)
-
-1. **Guest Registration** - Add public registration form for new guests
-2. **Email Notifications** - Send emails to guests when requests are approved/disapproved
-3. **Payment Verification** - Add ability for guests to re-upload payment if rejected
-4. **Guest Profile** - Allow guests to update their organization details
-5. **Request History** - Add pagination and advanced filtering for guest requests
-
-## System Status
-✅ All features implemented and ready for testing
-✅ Test users seeded
-✅ Server running on http://127.0.0.1:8000
+See [fdd.md](fdd.md), [model-documentation.md](model-documentation.md), and [TESTING_GUIDE.md](TESTING_GUIDE.md) for the broader system behavior and verification steps.

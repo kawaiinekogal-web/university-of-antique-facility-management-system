@@ -4,6 +4,8 @@
 
 Evaluation date: 24 October 2026 
 
+> **Historical assessment:** This is a point-in-time audit from October 24, 2026, not a live issue list. Some findings may already be fixed or may have changed; verify each against the current source before acting. See [TODO.md](TODO.md) for current follow-ups and [NEED_TO_FIX_AND_UPDATE.md](NEED_TO_FIX_AND_UPDATE.md) for the documented resolution status of the listed fixes.
+
 Need to Be Fixed – McCall Evaluation 
 
 # **Table of Contents** 
@@ -985,4 +987,3 @@ Need to Be Fixed – McCall Evaluation
 - **`.env` has duplicate settings:** DB_* and LOG_* values are defined twice; the later values silently override the earlier ones. 
 
 Page 35 of 37 
-

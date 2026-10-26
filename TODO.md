@@ -1,26 +1,17 @@
-# TODO
+# Current Documentation and Verification Notes
 
-## Status normalization (legacy "booked" → "reserved")
+This file tracks only current follow-up items. Historical audit findings are preserved in `NEED_TO_BE_FIX.md`, `NEED_TO_FIX_AND_UPDATE.md`, and dated critique snapshots; those records are not an authoritative live backlog.
 
-- [x] Update `BookingService`, queries, validation and views to use `reserved` as the active status instead of `booked`.
-- [x] Add one-time migration to convert existing `booked` records to `reserved` in `bookings` and `form_submissions`.
-- [x] Add safety check in `AppServiceProvider` to normalize any leftover `booked` rows to `reserved` on boot.
-- [x] Ensure auto-completion: `reserved` bookings whose `end_time` has passed are marked `completed`.
-- [ ] Re-run smoke tests on:
-  - Admin bookings list / calendar / overview.
-  - College and org "My Reservations" and calendars.
-  - Public calendar.
-  - Facilities utilization approvals (set reservation flow).
+## Routine verification after workflow changes
 
-## Goal: Center welcome page content horizontally
+- [ ] Run `php artisan test` and record the current result in release notes when it changes.
+- [ ] For UI changes, use Playwright at desktop and mobile widths and record what was checked.
+- [ ] Confirm database migrations are applied in the target environment before using new fields.
+- [ ] Re-check route and workflow documentation against `routes/web.php` and the controllers when endpoints change.
 
-- [x] Inspect current `resources/views/welcome.blade.php` content and styling.
+## Current tracking-name behavior
 
-- [ ] Create a fixed-width centered container and apply it consistently to portal + facilities.
-- [ ] Replace conflicting/duplicated hero/portal/facilities layout rules.
-- [ ] Remove reliance on Tailwind utility classes that conflict with the page CSS.
-- [ ] Update hero overlay to center horizontally.
-- [ ] Ensure the facilities grid is fully centered using the same container.
-- [ ] Write final `welcome.blade.php` with coherent HTML structure + CSS.
-- [ ] Run a quick sanity check by searching for obvious layout classes and ensuring no leftover broken markup.
-
+- New staff accounts store an explicit `users.last_name`; new guest requests store `requester_last_name` in the submission payload.
+- Status lookup uses the explicit value and does not infer a surname from a full name.
+- Existing records without an explicit tracking value retain legacy matching; no surname backfill should split historical names.
+- Guest and college request/approval/booking/tracker flows have feature-test coverage.

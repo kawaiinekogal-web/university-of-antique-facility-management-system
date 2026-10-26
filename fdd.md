@@ -4,10 +4,10 @@
 
 The UA Facility Management System is a role-based web application that centralizes facility reservations, utilization requests, and maintenance coordination for the University of Antique. It supports:
 
-- Public users (reservation calendar and no-sign-in request, booking, and maintenance status lookup).
+- Public users (reservation calendar, no-sign-in guest facility requests, and request/booking/maintenance status lookup).
 - GSU admins (full control over facilities, reservations, and users).
 - College staff (manage college facilities and submit reservation requests).
-- Organization staff (submit and track facility utilization requests).
+- Organization staff (submit and track facility utilization and repair/maintenance requests).
 
 This document describes the functional behavior of the system from a user and business perspective, independent of implementation details.
 
@@ -19,7 +19,8 @@ This document describes the functional behavior of the system from a user and bu
 
 - View the public reservation calendar.
 - See upcoming reservations per facility.
-- Check a facility request (`FM`), booking (`BKG`), or maintenance ticket (`RM`) status without signing in, using the tracking code and the submitter's last name.
+- Check a facility request (`FM`), booking (`BKG`), or maintenance ticket (`RM`) status without signing in, using the tracking code and the submitter's explicitly recorded tracking last name.
+- For new records, the tracking last name is separately entered/stored; the system does not infer it from a full name. Legacy records without an explicit value retain legacy matching.
 - View matching status and relevant schedule/request details without exposing the requester's identity. A code or surname mismatch does not disclose the record.
 - Public tracking is read-only for status. Approved guest facility requests may additionally expose temporary signed PDF and payment-receipt actions when applicable.
 
@@ -30,7 +31,9 @@ This document describes the functional behavior of the system from a user and bu
 - Convert approved requests into reservations.
 - Create high‑priority "direct" reservations that can preempt existing ones.
 - View and manage all reservations (reschedule, cancel).
+- Deactivate staff accounts without deleting their request and reservation history.
 - Generate official PDF forms (Facilities Utilization, Repair & Maintenance).
+- Review and update repair/maintenance tickets submitted by staff.
 - Manage portal user accounts (admins, college staff, org staff).
 - View system‑wide analytics (monthly reservations per facility, daily counts).
 
@@ -38,19 +41,22 @@ This document describes the functional behavior of the system from a user and bu
 
 - Manage facilities owned by their college (CRUD, availability).
 - Submit facilities utilization requests to GSU.
+- Submit repair/maintenance tickets and view tickets submitted by members of their college team.
+- Exchange messages with GSU on college repair tickets; closed tickets are read-only.
 - View and filter:
   - Their own facilities utilization requests.
   - Their reservations (active / rescheduled).
 - View read‑only reservation calendars:
   - Public calendar (home page).
-  - College calendar (college + own reservations).
+  - College calendar (all active reservations, with facility counts).
 
 ### 2.4 Organization Staff
 
-- Submit facilities utilization requests (for events/activities).
+- Submit facilities utilization requests (for events/activities) and repair/maintenance tickets.
+- View their own repair/maintenance tickets.
 - View and filter their own utilization requests.
 - View their reservations (active / rescheduled).
-- View read‑only reservation calendar scoped to all active reservations.
+- View the read-only reservation calendar of all active reservations; the reservations list remains requester-scoped.
 
 ---
 
@@ -102,7 +108,8 @@ This document describes the functional behavior of the system from a user and bu
    - Equipment quantities:
      - Monobloc chairs, tables, fans, rostrum, flag & school color, sound, LED wall.
    - Noted‑by signatory (predefined or custom).
-   - System captures requester identity (user, unit) and date of request.
+   - System captures requester identity (user, unit), date of request, and the account's separately recorded tracking last name.
+   - New staff accounts require an explicit tracking last name. Public guests enter their tracking last name on each facility request.
 
 2. **Reservation conflict handling:**
    - The form shows booked time ranges for selected facilities and dates and blocks submission when a requested time overlaps an active reservation.
@@ -110,11 +117,12 @@ This document describes the functional behavior of the system from a user and bu
    - Approval rechecks and reserves every selected facility on every requested day atomically. If availability changes after submission, no bookings are created and the request remains pending.
 
 3. **Status lifecycle (FormSubmission):**
-   - `pending`: newly submitted requests.
-   - `approved`: admin has approved; request still needs signing and conversion to reservation.
-   - `reserved`: request has been converted into a reservation.
+   - `pending`: newly submitted requests awaiting GSU review. A receipt is not required at submission.
+   - `reserved`: admin approval successfully created the reservation; the submission is linked to the booking.
    - `disapproved`: request denied by admin.
    - `cancelled`: requester has cancelled a pending request (college or org).
+   - `approved` and `pending_payment`: retained for legacy submissions. Current guest payment progress is tracked separately in `payment_status`; approving a guest request creates its reservation and sets the submission to `reserved`.
+   - Guest payment states (`payment_status`) are `not_required`, `pending_payment`, `payment_uploaded`, and `payment_verified`. Receipt upload is available after approval when payment is applicable; no receipt is required at submission.
 
 4. **Cancel request (College & Org):**
    - A requester may cancel **only while status is `pending`**.
@@ -123,7 +131,7 @@ This document describes the functional behavior of the system from a user and bu
      - Request is hidden from "pending approvals" on admin side but visible historically.
 
 5. **College/Org views:**
-   - List of own requests (status != 'reserved'), filterable by:
+   - List of own requests, including reserved requests, filterable by:
      - Control number.
      - Status.
      - Activity date.
@@ -146,15 +154,15 @@ This document describes the functional behavior of the system from a user and bu
 **Functional Requirements:**
 
 1. **Creation from approved requests:**
-   - Admin selects an approved utilization request.
+   - Admin approves an eligible pending utilization request.
    - System validates:
-     - Request status is `approved`.
+     - Request status allows approval and any uploaded receipt has been verified.
      - Every selected facility is `available`.
      - No requested day/time overlaps an active reservation on any selected facility.
    - On success:
      - Creates one `Booking` with status `reserved` for each event day.
      - Links all selected facilities to each booking (many‑to‑many).
-     - Updates the request's status to `reserved`.
+     - Updates the request's status to `reserved` directly; if later scheduling work is required, the request remains pending and no booking is created.
      - Sends notifications to requester and admins.
 
 2. **Direct high‑priority reservations (admin):**
@@ -173,9 +181,9 @@ This document describes the functional behavior of the system from a user and bu
    - Old `booked` values are mapped to `reserved` on migration/boot.
 
 4. **Auto-completion:**
-   - On each app boot, the system:
-     - Converts any leftover `booked` bookings to `reserved`.
-     - Marks `reserved` bookings with `end_time < now()` as `completed`.
+   - The hourly `bookings:normalize-and-complete` scheduled command:
+     - Converts leftover `booked` bookings to `reserved`.
+     - Marks `reserved` bookings with an elapsed `end_time` as `completed`.
 
 5. **Modification (Admin):**
    - Admin can:
@@ -198,7 +206,29 @@ This document describes the functional behavior of the system from a user and bu
 
 ---
 
-### 3.4 Calendars
+### 3.4 Repair and Maintenance Tickets
+
+**Owners:** College staff and organization staff submit tickets; GSU administrators coordinate and update them.
+
+1. **Ticket submission**
+   - Authenticated college and organization staff submit a ticket with a subject, issue description, and listed facility.
+   - College staff may choose “Others” and enter an unlisted location.
+   - The submitter's account must have a separately recorded tracking last name.
+   - Each ticket receives an `RM-…` tracking code and starts with status `notified`.
+2. **Administration**
+   - GSU admins view active and completed tickets, update status, and add remarks.
+   - Supported ticket statuses are `notified`, `pending`, `ongoing`, `success`, and `failed`.
+   - Status and remark changes notify the requester; college tickets notify the requester's college team.
+3. **College conversation**
+   - A college staff member can view tickets submitted by members of their own college and exchange messages with GSU.
+   - Messages are shared with the college team. Conversations are read-only after status becomes `success` or `failed`.
+4. **Organization access**
+   - Organization staff can submit and view their own tickets. The college-wide conversation feature is not part of the organization ticket workflow.
+5. **Public status check**
+   - Anyone with the ticket code and the requester's exact explicit tracking last name can view ticket status, location, subject, and submission date without signing in.
+   - Lookup is read-only and does not expose requester identity.
+
+### 3.5 Calendars
 
 **Owner:** Public, Admin, College, Org.
 
@@ -228,13 +258,12 @@ This document describes the functional behavior of the system from a user and bu
      - Reservations created by the college staff member, plus
      - Reservations for facilities owned by that college.
 
-4. **Org calendar (`/org/bookings` and `/org/calendar`):**
-   - Shared partial; `calendarRoute = 'org.bookings.index'` or `org.bookings.calendar` depending on view.
-   - Shows active reservations, read‑only.
+4. **Org calendar (`/org/calendar`):**
+   - Read-only calendar showing all active reservations. `/org/bookings` is the signed-in user's reservation list.
 
 ---
 
-### 3.5 Notifications
+### 3.6 Notifications
 
 **Owner:** All authenticated roles.
 

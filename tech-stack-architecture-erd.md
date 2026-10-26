@@ -1,12 +1,13 @@
 # Tech Stack, Architecture & ERD — UA Facility Management System
 
-> **NOTE:** Status vocabulary has been normalized. What used to be called **"booked"** in older code and data is now consistently called **"reserved"** for active reservations. A background normalization step and migration ensure legacy `booked` rows are mapped to `reserved`, and past reservations auto‑transition to `completed` after `end_time`.
+> **NOTE:** Current reservation status uses **`reserved`** instead of legacy **`booked`**. The hourly `bookings:normalize-and-complete` scheduled command normalizes legacy rows and marks elapsed reservations `completed`.
 >
 > - Active reservation statuses: `reserved`, `rescheduled`
 > - Historical statuses: `completed`, `cancelled`
-> - Form submission statuses: `pending`, `approved`, `reserved`, `disapproved`, `cancelled`
+> - Current facility request statuses include `pending`, `reserved`, `disapproved`, and `cancelled`; `approved` and `pending_payment` remain for legacy rows
+> - Guest payment states are tracked separately in `payment_status`
 >
-> Old references to `booked` in code, UI or data should be considered deprecated and are being phased out in favor of `reserved`.
+> Older records may still contain `booked`; it is a legacy value, not the current active status.
 
 ---
 
@@ -20,6 +21,8 @@
 
 ## Tech Stack
 
+The maintained application is the Laravel web system. Desktop, Electron, and Android material under `legacy/` is archival and is not required to operate the web app. The current web application has no `/fms-portal-entry` token route; staff sign in through `/login` with Laravel sessions and role middleware.
+
 ### Backend
 
 | Component | Technology | Version | Purpose |
@@ -29,18 +32,18 @@
 | ORM | Eloquent | (bundled with Laravel) | Database abstraction and model relationships |
 | Templating | Blade | (bundled with Laravel) | Server-side HTML rendering |
 | Database | MySQL | — | Production relational database |
-| Session Driver | File/Database | — | Session-based authentication |
+| Session Driver | Database in `.env.example` | — | Session-based authentication; another supported driver may be configured |
 
 ### Backend Dependencies (Composer)
 
 | Package | Purpose |
 |---|---|
 | `phpoffice/phpword` | Generate DOCX documents (facilities utilization and repair forms) |
-| `defuse/php-encryption` | Symmetric encryption utilities |
-| `web-token/jwt-core` | JWT token support |
-| `phpseclib/phpseclib` | PHP Secure Communications Library |
-| `hashids/hashids` | Obfuscate numeric IDs into short hashed strings |
-| `symfony/crypto` | Additional cryptographic utilities |
+| `dompdf/dompdf` | PDF generation dependency |
+| `defuse/php-encryption` | Composer dependency; verify application call sites before relying on it |
+| `web-token/jwt-core` | Composer dependency; staff web authentication uses Laravel sessions |
+| `phpseclib/phpseclib` | Cryptographic library dependency |
+| `hashids/hashids` | ID-encoding dependency; not a substitute for authorization |
 
 ### Backend Dev Dependencies
 
@@ -62,15 +65,15 @@
 | Build Tool | Vite | 7.x | Asset bundling and HMR |
 | Vite Plugin | `laravel-vite-plugin` | 2.x | Laravel/Vite integration |
 | HTTP Client | Axios | 1.x | AJAX requests |
-| Fonts | Google Sans Flex, EB Garamond, Source Sans 3 | — | Typography |
+| Fonts | Defined in the current Blade/CSS assets | — | See the UI documentation for design details |
 
 ### Frontend Dependencies (npm)
 
 | Package | Purpose |
 |---|---|
-| `crypto-js` | Client-side encryption/hashing |
-| `bcryptjs` | Client-side bcrypt hashing |
-| `jsonwebtoken` | Client-side JWT handling |
+| `crypto-js` | Dependency present; not a substitute for server-side controls |
+| `bcryptjs` | Dependency present; Laravel performs server-side password hashing |
+| `jsonwebtoken` | Dependency present; staff web authentication uses Laravel sessions |
 
 ### Frontend Dev Dependencies
 
@@ -81,7 +84,9 @@
 | `javascript-obfuscator` | Obfuscate client-side JavaScript |
 | `terser` | JavaScript minification |
 
-### Desktop Launchers (pywebview)
+### Archived Desktop Launcher References
+
+Old launcher documentation is retained under `legacy/`; launcher source files and token-gated portal entry are not part of the current web workflow.
 
 | Component | Technology | Purpose |
 |---|---|---|
@@ -91,12 +96,11 @@
 | Obfuscation | PyArmor | Protect Python source code |
 | Security | cryptography, PyJWT, bcrypt | Token validation and key verification |
 
-**Launcher Files:**
-- `launchers/admin_launcher.py` — Admin Portal launcher
-- `launchers/college_launcher.py` — College Staff Portal launcher
-- `launchers/org_launcher.py` — Organization Staff Portal launcher
+**Documentation:** `legacy/LAUNCHER_README.md`
 
-### Desktop Launchers (Electron — Alternative)
+### Archived Electron References
+
+The former Electron launcher is not part of the current application workflow; do not rely on the old token-based authentication details below.
 
 | Component | Technology | Purpose |
 |---|---|---|
@@ -104,12 +108,11 @@
 | Packager | electron-builder | 25.x | Build portable `.exe` files |
 | Config | variant.json + write-variant.js | Role selection at build time |
 
-**Launcher Files:**
-- `launchers/electron/main.js` — Main process (gate screen → portal)
-- `launchers/electron/gate.html` — Local key-entry gate UI
-- `launchers/electron/preload.js` — Context bridge for IPC
+**Status:** Historical project material only.
 
-### Mobile App (Android)
+### Archived Android Client Reference
+
+The organization WebView client is archived under `legacy/android/`; its token-based portal entry is not supported by the current web routes.
 
 | Component | Technology | Purpose |
 |---|---|---|
@@ -119,9 +122,7 @@
 | Target | Organization Staff only | Mirrors `org_launcher.py` behavior |
 
 **App Files:**
-- `android/ua-fms-org/app/.../GateActivity.kt` — Local key-entry gate screen
-- `android/ua-fms-org/app/.../PortalActivity.kt` — WebView loading the Laravel portal
-- `android/ua-fms-org/app/.../LauncherConfig.kt` — Build-time configuration constants
+- `legacy/android/ua-fms-org/` — archived Android WebView client source
 
 ### Document Generation
 
@@ -150,27 +151,13 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                        CLIENT LAYER                             │
 │                                                                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │   Desktop    │  │   Desktop    │  │     Web Browser      │  │
-│  │  Launchers   │  │  (Electron)  │  │   (Public Access)    │  │
-│  │  (pywebview) │  │              │  │                      │  │
-│  │              │  │  Admin       │  │  Public calendar     │  │
-│  │  Admin       │  │  College     │  │  Login page          │  │
-│  │  College     │  │  Org Staff   │  │  Role dashboards     │  │
-│  │  Org Staff   │  │              │  │                      │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────┘  │
-│         │                 │                      │              │
-│  ┌──────┴─────────────────┴──────────────────────┘              │
-│  │                                                              │
-│  │  ┌──────────────────┐                                        │
-│  │  │  Android App     │                                        │
-│  │  │  (Kotlin WebView)│                                        │
-│  │  │  Org Staff only  │                                        │
-│  │  └────────┬─────────┘                                        │
-│  │           │                                                  │
-│  └───────────┤  All clients connect via HTTPS/HTTP              │
-│              │  using FMS_ACCESS_TOKEN + role parameter          │
-└──────────────┼──────────────────────────────────────────────────┘
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                     Web Browser                            │  │
+│  │ Public calendar, guest request form, status tracker, login, │  │
+│  │ and role-restricted staff portals                           │  │
+│  │ Legacy desktop/mobile wrappers are not required or supported│  │
+│  └─────────────────────────────┬──────────────────────────────┘  │
+└────────────────────────────┬─────────────────────────────────────┘
                │
                ▼
 ┌──────────────────────────────────────────────────────────────────┐
@@ -182,9 +169,9 @@
 │  │  ┌─────────────────────────────────────────────────────┐   │  │
 │  │  │                   MIDDLEWARE                         │   │  │
 │  │  │                                                     │   │  │
-│  │  │  LoginAccessMiddleware    →  Token validation        │   │  │
 │  │  │  auth (session)           →  Authentication          │   │  │
 │  │  │  RoleMiddleware           →  Role-based access       │   │  │
+│  │  │  EnsureActiveUser         →  Active-account checks   │   │  │
 │  │  │  CSRF protection          →  Form security           │   │  │
 │  │  └─────────────────────────────────────────────────────┘   │  │
 │  │                                                            │  │
@@ -202,6 +189,7 @@
 │  │  │    FacilityController     →  CRUD facilities          │   │  │
 │  │  │    BookingController      →  Manage bookings          │   │  │
 │  │  │    FormSubmissionController → Review requests         │   │  │
+│  │  │    MaintenanceTicketController → Update tickets       │   │  │
 │  │  │    FacilitiesFormPdfController → Generate PDFs        │   │  │
 │  │  │    UserController         →  Manage users             │   │  │
 │  │  │                                                     │   │  │
@@ -210,17 +198,19 @@
 │  │  │    FacilityController     →  College facilities       │   │  │
 │  │  │    BookingController      →  Read-only calendar       │   │  │
 │  │  │    FormController         →  Submit/view requests     │   │  │
+│  │  │    MaintenanceTicketController → Tickets and chat     │   │  │
 │  │  │                                                     │   │  │
 │  │  │  Org\                                                │   │  │
 │  │  │    DashboardController    →  Org dashboard            │   │  │
 │  │  │    BookingController      →  Read-only calendar       │   │  │
 │  │  │    FormController         →  Submit/view requests     │   │  │
+│  │  │    MaintenanceTicketController → Own tickets          │   │  │
 │  │  └─────────────────────────────────────────────────────┘   │  │
 │  │                                                            │  │
 │  │  ┌─────────────────────────────────────────────────────┐   │  │
 │  │  │                     VIEWS                           │   │  │
 │  │  │                                                     │   │  │
-│  │  │  Blade Templates (41 files)                          │   │  │
+│  │  │  Blade templates                                     │   │  │
 │  │  │  Tailwind CSS v4 styling                             │   │  │
 │  │  │  Vite asset bundling                                 │   │  │
 │  │  │  Standalone PDF form views (facilities + repair)     │   │  │
@@ -229,10 +219,10 @@
 │  │  ┌─────────────────────────────────────────────────────┐   │  │
 │  │  │                ELOQUENT MODELS                      │   │  │
 │  │  │                                                     │   │  │
-│  │  │  User, Facility, Equipment, Booking,                │   │  │
-│  │  │  MaintenanceTicket, MaintenanceLog,                  │   │  │
-│  │  │  StaffAssignment, FormControl, FormSubmission,       │   │  │
-│  │  │  Notification                                        │   │  │
+│  │  │  User, College, Facility, Signatory, Equipment,      │   │  │
+│  │  │  Booking, FormSubmission, MaintenanceTicket,         │   │  │
+│  │  │  MaintenanceTicketMessage, MaintenanceLog,           │   │  │
+│  │  │  StaffAssignment, FormControl, Notification          │   │  │
 │  │  └─────────────────────────────────────────────────────┘   │  │
 │  └────────────────────────────────────────────────────────────┘  │
 │                                                                  │
@@ -245,15 +235,17 @@
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │                      MySQL Database                        │  │
 │  │                                                            │  │
-│  │  users, facilities, equipment, bookings,                   │  │
-│  │  maintenance_tickets, maintenance_logs,                    │  │
-│  │  staff_assignments, form_controls,                         │  │
-│  │  form_submissions, notifications, sessions                 │  │
+│  │  users, colleges, facilities, signatories, equipment,      │  │
+│  │  bookings, booking_facility, form_submissions,             │  │
+│  │  maintenance_tickets, maintenance_ticket_messages,         │  │
+│  │  maintenance_logs, staff_assignments, form_controls,       │  │
+│  │  notifications, sessions, jobs, cache                      │  │
 │  └────────────────────────────────────────────────────────────┘  │
 │                                                                  │
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │                   File System Storage                      │  │
 │  │                                                            │  │
+│  │  Private payment receipts and supporting attachments       │  │
 │  │  Generated DOCX/PDF documents (temporary)                  │  │
 │  │  Session files, cache, logs                                │  │
 │  └────────────────────────────────────────────────────────────┘  │
@@ -264,50 +256,23 @@
 ### Authentication & Access Flow
 
 ```
-┌──────────────┐    Gate Key     ┌──────────────┐   access_token    ┌──────────────┐
-│   Desktop    │ ──────────────→ │  Local Gate   │ ───────────────→  │   Laravel    │
-│   Launcher   │    (validate)   │   Screen      │   + role param    │  /fms-portal │
-│  or Mobile   │                 │               │                   │  -entry      │
-└──────────────┘                 └──────────────┘                   └──────┬───────┘
-                                                                          │
-                                                                          ▼
-                                                                   ┌──────────────┐
-                                                                   │ LoginAccess  │
-                                                                   │ Middleware   │
-                                                                   │ (validates   │
-                                                                   │  token)      │
-                                                                   └──────┬───────┘
-                                                                          │
-                                                                          ▼
-                                                                   ┌──────────────┐
-                                                                   │  Login Page  │
-                                                                   │  (email +    │
-                                                                   │   password)  │
-                                                                   └──────┬───────┘
-                                                                          │
-                                                                          ▼
-                                                                   ┌──────────────┐
-                                                                   │    Role      │
-                                                                   │  Middleware  │
-                                                                   │  (enforces   │
-                                                                   │   role)      │
-                                                                   └──────┬───────┘
-                                                                          │
-                                                     ┌────────────────────┼────────────────────┐
-                                                     ▼                    ▼                    ▼
-                                              ┌────────────┐     ┌──────────────┐     ┌────────────┐
-                                              │   Admin    │     │   College    │     │    Org     │
-                                              │ Dashboard  │     │  Dashboard   │     │ Dashboard  │
-                                              └────────────┘     └──────────────┘     └────────────┘
+Browser ── GET /login ──> Laravel session authentication
+                              │
+                              ├── role:admin ─────────────> Admin portal
+                              ├── role:college_staff ─────> College portal
+                              └── role:org_staff ─────────> Organization portal
+
+Public calendar, guest facility requests, and status lookup do not require staff authentication.
+Active-account middleware blocks deactivated users from protected pages.
 ```
 
 ### Role-Based Access Control (RBAC)
 
 | Role | Dashboard | Facilities | Bookings | Requests | Users | Forms PDF | Notifications |
 |---|---|---|---|---|---|---|---|
-| **admin** | Admin dashboard | Full CRUD (all) | Full CRUD + calendar + overview | Review, approve, disapprove, convert | Create & list users | Generate & download | Yes |
-| **college_staff** | College dashboard | CRUD (own college) | Read-only calendar | Submit & view own | — | — | Yes |
-| **org_staff** | Org dashboard | — | Read-only calendar | Submit & view own | — | — | Yes |
+| **admin** | Admin dashboard | Full management | Manage reservations + calendar + reports | Review, approve, disapprove, reserve | Manage staff accounts | Generate & download | Yes |
+| **college_staff** | College dashboard | Manage own college facilities | Own reservations + college calendar | Submit, view, cancel own | Manage college team | — | Yes |
+| **org_staff** | Org dashboard | — | Own reservations + calendar | Submit, view, cancel own | Manage organization team | — | Yes |
 | **viewer** | Public calendar | — | — | — | — | — | — |
 
 ### Request-to-Booking Workflow
@@ -323,11 +288,10 @@ College/Org Staff                         Admin (GSU)
       │                                        │
       │                                   2. Review request
       │                                        │
-      │                                   3a. Approve
-      │                                        │  (status → 'approved')
-      │                                        │  Notification sent to requester
-      │  ←─────────────────────────────────    │
-      │     Notification: "approved"           │
+      │                                   3a. Review / approve
+      │                                        │  Create reservation if available
+      │                                        │  (submission status → 'reserved')
+      │                                        │  Guest payment tracked separately
       │                                        │
       │                                   3b. OR Disapprove
       │                                        │  (status → 'disapproved')
@@ -335,9 +299,9 @@ College/Org Staff                         Admin (GSU)
       │                                   4. Generate PDF
       │                                        │  (PHPWord → DOCX → PDF)
       │                                        │
-      │                                   5. Convert to Booking
-      │                                        │  (Booking created,
-      │                                        │   FormSubmission → 'converted')
+      │                                   5. Reserve requested facilities/days
+      │                                        │  (Booking records created,
+      │                                        │   FormSubmission → 'reserved')
       │                                        │  Notification sent to requester
       │  ←─────────────────────────────────    │
       │     Notification: "booking_created"    │
@@ -357,7 +321,7 @@ The homepage (`GET /`) renders the public calendar and tracker. The tracker call
 | `BK` | `Booking` | `booking_code` (`BKG-…`) | Status, venue, purpose, date/time |
 | `RM` | `MaintenanceTicket` | `ticket_code` (`RM-…`) | Status, facility, subject, submitted date |
 
-The controller checks the last name against the associated requester name (and, for FM, names stored in the submission payload). It returns status/details without requester identity; an unmatched code and surname produce the same not-found response. This lookup path is read-only. For approved guest FM submissions only, the response can include short-lived signed links to the PDF and, when applicable, receipt-upload action. Receipt upload is a separate signed, rate-limited POST endpoint.
+For new records, the controller checks the separately stored tracking last name: the account's `last_name` for maintenance and internal requests, or `requester_last_name` in the FM payload for guest submissions. Bookings linked to an FM submission use that submission's tracking value. It does not infer a surname from the full name when an explicit value exists; older records without one retain legacy full-name matching. Results omit requester identity, and an unmatched code and surname produce the same not-found response. This lookup path is read-only. For approved guest FM submissions only, the response can include short-lived signed links to the PDF and, when applicable, receipt-upload action. Receipt upload is a separate signed, rate-limited POST endpoint.
 
 ### Deployment Architecture
 
@@ -378,13 +342,12 @@ The controller checks the last name against the associated requester name (and, 
 │                     │ DOCX → PDF  │                     │
 │                     └─────────────┘                     │
 └─────────────────────────────────────────────────────────┘
-        ▲                    ▲                    ▲
-        │                    │                    │
-   ┌────┴─────┐     ┌───────┴──────┐    ┌───────┴──────┐
-   │ Desktop  │     │  Web Browser │    │   Android    │
-   │ Launcher │     │  (Direct     │    │   App        │
-   │ (.exe)   │     │   Access)    │    │  (APK)       │
-   └──────────┘     └──────────────┘    └──────────────┘
+                              ▲
+                              │
+                       ┌──────┴──────┐
+                       │ Web Browser │
+                       │   (HTTPS)   │
+                       └─────────────┘
 ```
 
 ### Directory Structure
@@ -395,31 +358,31 @@ Capstone-Univerity-Of-Antique-Facility-Management-System/
 ├── app/
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── Admin/              ← Admin controllers (6)
-│   │   │   ├── College/            ← College staff controllers (4)
-│   │   │   ├── Org/                ← Org staff controllers (3)
+│   │   │   ├── Admin/              ← Admin controllers
+│   │   │   ├── College/            ← College staff controllers
+│   │   │   ├── Org/                ← Organization controllers
 │   │   │   ├── AuthController.php
 │   │   │   ├── GsuFormController.php
 │   │   │   ├── NotificationController.php
 │   │   │   └── PublicCalendarController.php
 │   │   ├── Middleware/
 │   │   │   ├── RoleMiddleware.php
-│   │   │   └── LoginAccessMiddleware.php
+│   │   │   └── EnsureActiveUser.php
 │   │   └── ...
-│   ├── Models/                     ← Eloquent models (10)
+│   ├── Models/                     ← Eloquent models (13)
 │   └── Providers/
 │       └── AppServiceProvider.php  ← Global notification count view composer
 │
 ├── resources/
 │   ├── views/
-│   │   ├── layouts/                ← Layout templates (4 + 1 partial)
-│   │   ├── admin/                  ← Admin views (14)
-│   │   ├── college/                ← College views (12)
-│   │   ├── org/                    ← Org views (3)
+│   │   ├── layouts/                ← Layout templates and shared partials
+│   │   ├── admin/                  ← Admin views
+│   │   ├── college/                ← College views
+│   │   ├── org/                    ← Organization views
 │   │   ├── forms/                  ← GSU PDF form views (2)
-│   │   ├── notifications/          ← Notification views (1)
-│   │   ├── auth/                   ← Auth views (1)
-│   │   ├── public/                 ← Public views (1)
+│   │   ├── notifications/          ← Notification views
+│   │   ├── auth/                   ← Auth views
+│   │   ├── public/                 ← Public views
 │   │   └── welcome.blade.php      ← Public landing page, calendar, and ticket tracker
 │   ├── css/app.css
 │   └── js/app.js
@@ -428,28 +391,11 @@ Capstone-Univerity-Of-Antique-Facility-Management-System/
 │   └── web.php                     ← All route definitions
 │
 ├── database/
-│   ├── migrations/                 ← Schema migrations (13)
+│   ├── migrations/                 ← Schema migrations
 │   ├── seeders/                    ← FacilitySeeder + DatabaseSeeder
 │   └── factories/                  ← Model factories
 │
-├── launchers/                      ← Desktop launchers
-│   ├── admin_launcher.py           ← Admin (pywebview)
-│   ├── college_launcher.py         ← College (pywebview)
-│   ├── org_launcher.py             ← Org (pywebview)
-│   ├── electron/                   ← Electron alternative
-│   │   ├── main.js
-│   │   ├── gate.html
-│   │   ├── preload.js
-│   │   └── package.json
-│   └── requirements.txt
-│
-├── android/
-│   └── ua-fms-org/                 ← Android WebView app (Org only)
-│       ├── app/src/main/.../
-│       │   ├── GateActivity.kt
-│       │   ├── PortalActivity.kt
-│       │   └── LauncherConfig.kt
-│       └── build.gradle.kts
+├── legacy/                         ← Archived client documentation and Android wrapper
 │
 ├── DEPLOYMENT_GUIDE.md
 ├── composer.json
@@ -469,10 +415,22 @@ classDiagram
     class User {
         +bigint id
         +string name
+        +string last_name
         +string email
         +string role
+        +string position
+        +string contact_number
         +string college_name
+        +bigint college_id
         +string organization_name
+        +bool is_active
+    }
+
+    class College {
+        +bigint id
+        +string name
+        +string short_name
+        +text description
     }
 
     class Facility {
@@ -481,6 +439,7 @@ classDiagram
         +string location
         +string owner_type
         +string owner_college
+        +bigint college_id
         +text description
         +bool is_active
         +string availability_status
@@ -535,7 +494,24 @@ classDiagram
         +string requester_type
         +string requester_unit
         +string status
+        +string payment_status
         +json payload
+    }
+
+    class Signatory {
+        +bigint id
+        +string type
+        +string name
+        +string unit
+        +bigint college_id
+        +bool is_active
+    }
+
+    class MaintenanceTicketMessage {
+        +bigint id
+        +bigint maintenance_ticket_id
+        +bigint user_id
+        +text body
     }
 
     class Notification {
@@ -562,18 +538,24 @@ classDiagram
     User "1" --> "*" Notification : user_id
     User "1" --> "*" FormSubmission : requester_id
 
-    Facility "1" --> "*" Booking : facility_id
+    College "1" --> "*" User : college_id
+    College "1" --> "*" Facility : college_id
+    College "1" --> "*" Signatory : college_id
+    Facility "*" --> "*" Booking : booking_facility
     Facility "1" --> "*" MaintenanceTicket : facility_id
     Booking "1" --> "*" MaintenanceTicket : booking_id (nullable)
 
     MaintenanceTicket "1" --> "*" StaffAssignment : maintenance_ticket_id
     MaintenanceTicket "1" --> "*" MaintenanceLog : maintenance_ticket_id
+    MaintenanceTicket "1" --> "*" MaintenanceTicketMessage : maintenance_ticket_id
+    User "1" --> "*" MaintenanceTicketMessage : user_id
 
     note for FormSubmission "Facilities utilization / repair form data stored as JSON payload"
     note for Equipment "Equipment quantities are stored in JSON payload (not via FK in schema)"
     note for FormControl "Generates sequential GSU control numbers for forms"
 ```
 
+> **Historical diagram:** The box-drawing ERD below is an older snapshot and does not represent the current schema. Use the Mermaid ERD and relationship summary above/below as the current references.
 
 ┌─────────────────────────────────┐
 │              USER               │
@@ -693,19 +675,23 @@ classDiagram
 | User → MaintenanceLogs | User | MaintenanceLog | One-to-Many | `maintenance_logs.staff_id` | CASCADE |
 | User → Notifications | User | Notification | One-to-Many | `notifications.user_id` | CASCADE |
 | User → FormSubmissions | User | FormSubmission | One-to-Many | `form_submissions.requester_id` | CASCADE |
-| Facility → Bookings | Facility | Booking | One-to-Many | `bookings.facility_id` | CASCADE |
+| User → TicketMessages | User | MaintenanceTicketMessage | One-to-Many | `maintenance_ticket_messages.user_id` | SET NULL |
+| Facility ↔ Bookings | Facility | Booking | Many-to-Many | `booking_facility.facility_id`, `booking_facility.booking_id` | CASCADE |
 | Facility → MaintenanceTickets | Facility | MaintenanceTicket | One-to-Many | `maintenance_tickets.facility_id` | CASCADE |
 | Booking → MaintenanceTickets | Booking | MaintenanceTicket | One-to-Many | `maintenance_tickets.booking_id` | SET NULL |
 | MaintenanceTicket → StaffAssignments | MaintenanceTicket | StaffAssignment | One-to-Many | `staff_assignments.maintenance_ticket_id` | CASCADE |
 | MaintenanceTicket → MaintenanceLogs | MaintenanceTicket | MaintenanceLog | One-to-Many | `maintenance_logs.maintenance_ticket_id` | CASCADE |
+| MaintenanceTicket → Messages | MaintenanceTicket | MaintenanceTicketMessage | One-to-Many | `maintenance_ticket_messages.maintenance_ticket_id` | CASCADE |
+| College → Users/Facilities/Signatories | College | User/Facility/Signatory | One-to-Many | `college_id` | Depends on schema constraint |
 
 ### Standalone Tables (No Foreign Key Relationships)
 
 | Table | Purpose |
 |---|---|
-| `equipment` | Equipment inventory (referenced only via JSON payload in form submissions) |
+| `equipment` | Equipment inventory (quantities are stored with request data rather than linked per booking) |
 | `form_controls` | Control number sequence tracking for GSU forms |
 | `sessions` | Laravel session storage |
+| `cache`, `jobs` | Laravel cache and queue tables |
 
 ### Cardinality Summary
 
@@ -717,13 +703,14 @@ User (1) ───────── (∞) MaintenanceLog
 User (1) ───────── (∞) Notification
 User (1) ───────── (∞) FormSubmission
 
-Facility (1) ───── (∞) Booking
+Facility (∞) ───── (∞) Booking  [booking_facility pivot]
 Facility (1) ───── (∞) MaintenanceTicket
 
 Booking (1) ────── (∞) MaintenanceTicket  [nullable, SET NULL on delete]
 
 MaintenanceTicket (1) ── (∞) StaffAssignment
 MaintenanceTicket (1) ── (∞) MaintenanceLog
+MaintenanceTicket (1) ── (∞) MaintenanceTicketMessage
 
 Equipment ──── (standalone)
 FormControl ── (standalone)

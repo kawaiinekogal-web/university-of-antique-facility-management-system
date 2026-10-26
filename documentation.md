@@ -1,28 +1,29 @@
 # UI Redesign Documentation — UA Facility Management System
 
-**Date:** October 15, 2026 · **Last updated:** October 25, 2026
-**Scope:** Mainly the user interface (Blade templates and styling). A few features needed approved backend changes: multi-day requests, the public guest request form, ticket lookup, team accounts, portal-only sign-in and user editing. They are listed in [§15 — Backend changes](#backend-changes-approved-exceptions).
-**Status:** The latest changes ([What's new](#whats-new-october-16-25-2026)) are not committed yet.
+**Last updated:** October 26, 2026
+**Scope:** UI and workflow reference for the public site and staff portals, including backend features needed for request submission, ticket lookup, team accounts, and user management. Implementation details are linked in [§15 — Backend changes](#backend-changes-approved-exceptions).
+**Status:** UI and workflow reference, updated through October 26, 2026. Dated change notes below are historical; use the current routes and implementation as the source of truth. For code-level details, see the controller, routes/views, and model documentation.
 
 ---
 
-## What's new (October 16–25, 2026)
+## What's new (October 16–26, 2026)
 
 | Area | Change | Details |
 |---|---|---|
 | **Guests** | The guest portal is retired. Guests now request a facility **without an account** using a public form, then follow up with a ticket code. Guest accounts can no longer sign in. | [§10](#10-guest-access-no-account) |
-| **Public ticket tracker (Oct 25)** | The homepage tracker checks facility requests (`FM-…`), bookings (`BKG-…`) and maintenance tickets (`RM-…`) without sign-in. Every type requires the submitter's last name; results are read-only, with existing guest receipt/PDF actions retained where allowed. The form uses a two-row desktop layout and stacks on narrow screens. | [§6.1](#61-landing-page-welcomebladephp) |
+| **Public ticket tracker (Oct 25)** | The homepage tracker checks facility requests (`FM-…`), bookings (`BKG-…`) and maintenance tickets (`RM-…`) without sign-in. Every type requires the submitter's tracking last name; results are read-only, with existing guest receipt/PDF actions retained where allowed. The form uses a two-row desktop layout and stacks on narrow screens. | [§6.1](#61-landing-page-welcomebladephp) |
 | **Repair tickets** | College staff can type an **Others** place when the facility isn't listed. Each college repair ticket has a **live conversation** with the GSU admins, and tickets are **shared within the college** (everyone sees the team's tickets, updates and replies). | [§8](#repair-ticket-conversation-admin--college-staff) |
 | **"Noted by"** | College: the choices come from the college's **Users** team (Deans, Program Heads). Org: **required**, and must be a college **Dean** or **Program Head** (type their name), or **Someone else** (type position and name). | [§8](#new-request--purpose-signatory-and-equipment-steps-03-and-04), [§9](#9-organization-unit-portal) |
-| **All Requests order** | Requests that still need a decision are listed first: Pending, then payment to verify, then Approved, Reserved, Disapproved, Cancelled. | [§7](#7-admin-portal) |
+| **All Requests order** | Current pending requests are listed first, followed by legacy payment-pending and approved/reserved records, then disapproved and cancelled requests. Guest payment progress is stored separately from request status. | [§7](#7-admin-portal) |
 | **Request tickets** | Every facility request has a ticket code `FM-<year>-<request no.>`. A ticket pop-up opens right after submitting (College, Org and guests) and from each request's detail page. | [§8](#request-ticket-and-detail-pages) |
-| **Team accounts** | College and Org staff get a **Users** page. The Dean (College) or Governor (Org) adds, edits and removes accounts for their own unit. | [§8](#team-accounts-users-page) |
-| **Users** | New `position` and `contact_number` fields. The admin Users page shows the **Admin team**, and accounts can be **edited** and **deleted** with a warning that lists what gets deleted. | [§7](#7-admin-portal) |
+| **Team accounts** | College and Org staff get a **Users** page. The Dean (College) or Governor (Org) adds, edits and deactivates accounts for their own unit; deactivation preserves history. | [§8](#team-accounts-users-page) |
+| **Users** | New `position`, `contact_number`, and explicit tracking `last_name` fields. The admin Users page shows the **Admin team**; accounts can be edited or deactivated without deleting their history. | [§7](#7-admin-portal) |
 | **Sign-in** | Each landing page card only lets its own accounts in (for example, a college account can't use the Admin card). | [§6.2](#62-login-authloginbladephp) |
 | **Admin booking forms** | Create Direct Reservation and View / Modify now use the same date picker, venue board and equipment tiles as the College/Org request form. The direct reservation page's spacing was polished on Oct 19. | [§7](#7-admin-portal) |
 | **Detail pages** | New request detail and repair ticket detail pages for College, Org and Admin, with a progress tracker. | [§7](#7-admin-portal), [§8](#8-college-staff-portal) |
 | **Landing page** | Redesigned in black, white and greys with a triangle hero, a "Next on the calendar" card, staff sign-in cards and a Guest Access link. New public pages: Guest Access and Venue rates. | [§6](#6-public-pages) |
 | **Styles** | All inline `<style>` blocks moved into `resources/css/app.css`. Run `npm run build` after changing styles. | [§4](#4-shared-building-blocks-new-partials) |
+| **Explicit tracking last names (Oct 26)** | New accounts and public guest requests store a separate last name for status lookup. The tracker does not infer a surname from the full name; older rows without an explicit value retain legacy matching. | [§6.1](#61-landing-page-welcomebladephp), [model-documentation.md](model-documentation.md) |
 
 ---
 
@@ -40,7 +41,7 @@
 10. [Guest access (no account)](#10-guest-access-no-account)
 11. [Shared pages](#11-shared-pages)
 12. [Fixes made along the way](#12-fixes-made-along-the-way)
-13. [Known issues and backend follow-ups](#13-known-issues-and-backend-follow-ups)
+13. [Historical audit notes](#13-historical-audit-notes)
 14. [How to work with the new UI](#14-how-to-work-with-the-new-ui)
 15. [Files changed](#15-files-changed)
 16. [Verification](#16-verification)
@@ -53,10 +54,10 @@ Every page in the three staff portals (Admin, College Staff, Organization Unit),
 
 - A **slate monochrome palette** with grayscale campus photos under a dark gradient ("Slate Metallic / Monochrome Depth").
 - **Merriweather** for headings and **Inter** for body text.
-- One **shared sidebar and top bar** for all four portals, with a collapsible rail on desktop and a slide-in drawer on phones.
+- One shared portal shell for the three staff portals, with a collapsible rail on desktop and a slide-in drawer on phones. The public guest request flow does not use a guest sign-in portal.
 - Each page opens with a **photo banner**, followed by **number tiles**, then the page's content as tables, cards or timelines, with color-coded **status labels**.
 - Long forms are split into **numbered steps** with a **live summary card** beside them.
-- A **public ticket tracker** on the landing page. It looks up facility requests (FM), bookings (BKG) and maintenance tickets (RM) using the tracking code and the submitter's last name, without requiring sign-in; see [§6.1](#61-landing-page-welcomebladephp).
+- A **public ticket tracker** on the landing page. It looks up facility requests (FM), bookings (BKG) and maintenance tickets (RM) using the tracking code and the submitter's separately recorded last name, without requiring sign-in; new last names are not inferred from full names. Older rows without an explicit tracking value retain legacy matching; see [§6.1](#61-landing-page-welcomebladephp).
 - Guests request facilities **without an account**; see [§10](#10-guest-access-no-account).
 
 Form field names, form actions, links, filters and pagination are unchanged. Where an input type changed (for example a dropdown became clickable cards), it still sends exactly the same name and values.
@@ -70,7 +71,7 @@ Two rules were added under **UI Conventions** in `CLAUDE.md`:
 1. *When creating or fixing any UI, always also fix the margins, padding, font size, and font styles of the affected elements.*
 2. *Navigation must look and behave the same across all user portals (Admin, College Staff, Organization Unit, Guest Access): same colors, sidebar/header treatment, icons, and unique styling. When the navigation changes for one portal, apply the same change to the others.*
 
-Rule 2 is now enforced by structure: all four portal layouts render the same partial (`layouts/partials/portal-shell.blade.php`).
+Rule 2 is applied to the three current staff portals, which render the shared `layouts/partials/portal-shell.blade.php`. The former guest portal layout is retired.
 
 ---
 
@@ -316,7 +317,7 @@ College and Org staff can manage accounts for **their own** college or organizat
 - **Everyone else can:** see the list, and edit their own name, contact number, email and password, but not their position.
 - **New accounts** get the creator's role and the same college or organization automatically.
 - **Position suggestions:** College: Dean, Program Head, Staff. Org: Governor, Vice Governor, Secretary, Treasurer, Auditor, Public Information Officer, Adviser.
-- **Delete is blocked** for your own account, the original head account, and any account that has requests, reservations or repair tickets on record. The message says to ask the GSU admin, who *can* delete those.
+- Accounts are **deactivated**, not deleted. The action preserves the account's history and prevents sign-in; eligible future requests and bookings are cancelled. Users cannot deactivate themselves or the walk-in guest system account.
 - Accounts outside your unit return "not found".
 
 ---
@@ -375,7 +376,7 @@ These appear in three places: on each venue card, in the "On this day / On these
 
 **Layout fix:** booking lines inside venue cards wrap instead of overflowing (previously "Until 12:00 PM · 4 hrs" ran past the card at about 1024px). Checked at widths from 360 to 1536px: nothing crosses a card's or tile's padding.
 
-**Limit:** the calendar data contains approved bookings only (reserved / rescheduled). Requests still waiting for approval are not bookings and don't appear.
+**Limit:** the calendar data contains only `reserved` and `rescheduled` bookings. Requests still waiting for approval are not bookings and do not appear.
 
 ### New request — purpose, signatory and equipment (steps 03 and 04)
 
@@ -491,7 +492,7 @@ The guest portal and guest sign-in were **retired**. Outsiders now request a fac
    - **Venue & purpose:** GSU (non-college) facilities only. Each card shows its **rate** and what's already booked on the chosen date.
    - **Equipment:** the venue fee is filled in from the venue and number of days (rates from `venue-rates.php`); equipment quantities are added below. An estimated total sits beside the form (and above Submit on phones).
    - **Certification & approval:** certification statement and the guest's immediate head ("Noted by").
-   - **Documents:** required JPG/JPEG, PNG, or PDF payment receipt, up to 10 MiB; optional supporting attachments.
+   - **Documents:** optional receipt upload after GSU requests payment; JPG/JPEG, PNG, or PDF up to 10 MiB. Supporting attachments are optional.
 3. **Submitted page** (`/request-facility/submitted/{id}`): "Thank you, *name*!", the ticket pop-up opens by itself, and three next steps (save the code, receipt review, track it on the home page with the code and last name). Only the browser that submitted the request can open this page.
 4. **Tracking:** the landing page tracker ([§6.1](#61-landing-page-welcomebladephp)).
 
@@ -538,40 +539,11 @@ The guest portal and guest sign-in were **retired**. Outsiders now request a fac
 
 ---
 
-## 13. Known issues and backend follow-ups
+## 13. Historical audit notes
 
-These still need backend work. **Current fixed / open status of each item:** see [`NEED_TO_FIX_AND_UPDATE.md`](NEED_TO_FIX_AND_UPDATE.md).
+Earlier UI critiques and issue snapshots are preserved in [`NEED_TO_BE_FIX.md`](NEED_TO_BE_FIX.md), [`NEED_TO_FIX_AND_UPDATE.md`](NEED_TO_FIX_AND_UPDATE.md), and `.impeccable/critique/`. Their findings and scores reflect the dates recorded in those files and are not a live issue tracker. Verify any item against the current code before treating it as open.
 
-1. *(Resolved Oct 19: repair (RM) ticket lookup now works.)*
-2. **College and org dashboard repair counts:** the controllers count `in_progress`, `completed` and `rejected`, but tickets are saved as `ongoing`, `success` and `failed`. Those rows always show 0.
-3. **Deleting an account deletes its history.** **Resolved:** account management uses deactivation instead of deletion. Inactive accounts cannot sign in and existing sessions are logged out. Future facility requests and pending/reserved/rescheduled bookings are marked cancelled; past/completed activity and all account/history records are preserved.
-4. **Multiple facilities and multi-day requests:** College, Org, and public/guest forms support one or more facilities for a single day or continuous date range. Reserved-slot conflicts block submission while non-overlapping times remain available. Approved bookings reserve all selected facilities on every requested day atomically.
-5. **Printed PDF form:** includes the full date range and all selected venue checkboxes.
-6. *(Resolved Oct 21: public guest requests require a JPG/JPEG, PNG, or PDF receipt up to 10 MiB. Receipts are stored locally outside the public web root and served through an authorized route.)*
-7. *(Resolved, rechecked Oct 19: on a 390px phone the landing header no longer overlaps and the page doesn't scroll sideways.)* New small gap: on phones the header links (Facilities, Schedule, Guest access, Venue rates, About) are hidden and there's no menu button to reach them.
-8. **Data to correct (local database):** John C. Amar's college is saved as "CCIS Dean" instead of "CCIS"; in the old signatories table the CEA Dean is named "CCIS Dean". Fix in Admin → Users → Edit, or in the database.
-
-**From the Oct 19 critique** (`/impeccable critique`, 22/40; snapshot in `.impeccable/critique/`). Agreed next steps, top 3 (all need backend sign-off):
-
-9. **Wrong numbers on dashboards and Monthly Records:**
-   - The dashboards count repair statuses that don't exist (see item 2).
-   - The "Facility requests" tile silently excludes cancelled requests.
-   - On Monthly Records:
-     - The trend chart is empty.
-     - The equipment columns show "–".
-     - The total rental fees are blank.
-     - "PAGHIUSA HALL" and "Paghiusa hall" appear as separate venues.
-10. **Approve / Disapprove fire in one click:** there is no confirmation and no reason. Plan: a confirm dialog (same style as the account-deactivation dialog), with a required disapproval reason shown to the requester and in the tracker.
-11. **Reserved requests disappear from College/Org "My requests":** the controllers filter out `reserved`, but the page still shows a Reserved tab and says "No facility requests yet".
-
-Other critique findings, not scheduled yet:
-- The venue list differs on every page (4 / 8 / 11 / 12 venues, different names and pricing units).
-- Portal tables overflow on phones.
-- Sidebar group labels and the ±10 buttons are 10.5px with low contrast.
-- College and Org menus differ.
-- The "Control No." column shows the word "Pending".
-
-**Resolved since Oct 16:** the FM ticket lookup endpoint, the Create user organization-name bug, the guest ₱0.00 rental fee (the public form uses the official rates), and the guest "My bookings" filters and old guest detail page (the guest portal is retired).
+Current verification guidance is in [§16](#16-verification) and [TESTING_GUIDE.md](TESTING_GUIDE.md).
 
 ---
 
@@ -636,7 +608,7 @@ All view paths above are under `resources/views/`.
 
 **Styles:** `resources/css/app.css` now holds every page's styles (see [§4](#where-the-styles-live)).
 
-**Other:** `documentation.md` (this file), `CLAUDE.md` (UI rules), `TEST_ACCOUNTS.md` (current local accounts).
+**Other:** `documentation.md` (this file), `CLAUDE.md` (project rules), `TEST_ACCOUNTS.md` (development seeder guidance).
 
 ### Backend changes (approved exceptions)
 
@@ -647,7 +619,7 @@ All view paths above are under `resources/views/`.
 | Ticket lookup | `app/Http/Controllers/TicketLookupController.php` (new); route `GET /track/ticket` (`ticket.lookup`, throttled 20/min) |
 | Portal-only sign-in, guests blocked | `app/Http/Controllers/AuthController.php` |
 | Team accounts | `app/Http/Controllers/Traits/ManagesUnitUsers.php`, `app/Http/Controllers/College/UserController.php`, `app/Http/Controllers/Org/UserController.php` (all new); routes `college.users.*`, `org.users.*` |
-| Admin users (edit, delete, admin team, position, contact number) | `app/Http/Controllers/Admin/UserController.php`, `app/Http/Requests/StoreUserRequest.php`, `app/Models/User.php` (`position`, `contact_number` fillable); routes `admin.users.edit`, `update`, `destroy` |
+| Admin users (edit, deactivate, admin team, position, contact number, tracking last name) | `app/Http/Controllers/Admin/UserController.php`, `app/Http/Requests/StoreUserRequest.php`, `app/Models/User.php`; routes `admin.users.edit`, `update`, `deactivate` |
 | New user columns | `database/migrations/2026_10_17_000001_add_position_to_users_table.php` (`position`, 120 chars), `database/migrations/2026_10_18_000001_add_contact_number_to_users_table.php` (`contact_number`, 30 chars). Run `php artisan migrate`. |
 | Repair "Others" place (College) | `database/migrations/2026_10_19_000001_add_facility_other_to_maintenance_tickets_table.php` (`facility_id` becomes optional; new `facility_other`, 160 chars), `app/Models/MaintenanceTicket.php`, `app/Http/Controllers/College/MaintenanceTicketController.php` (choosing `other` requires the typed place) |
 | Repair ticket conversation | `database/migrations/2026_10_19_000002_create_maintenance_ticket_messages_table.php` (new `maintenance_ticket_messages`: ticket, user, body; deleted with the ticket), `app/Models/MaintenanceTicketMessage.php` (new), `app/Models/MaintenanceTicket.php` (`messages()`, `isClosed()`), `app/Http/Controllers/Traits/HandlesTicketMessages.php` (new), `Admin\MaintenanceTicketController`, `College\MaintenanceTicketController`; routes `admin.maintenance-tickets.messages(.store)` and `college.maintenance-tickets.messages(.store)` (GET returns JSON, POST throttled 30/min) |
@@ -663,20 +635,6 @@ All view paths above are under `resources/views/`.
 
 ## 16. Verification
 
-- Every change was checked in the browser with **Playwright**:
-  - signed in as each sample account using the locally configured test credentials. **Note:** most sample accounts have since been deleted from the local database, and Admin A's email is now `adminA@gsuadmin.com`. See `TEST_ACCOUNTS.md` for the current accounts, or run `php artisan db:seed` to restore the samples;
-  - at desktop width (1440px) and phone width (390px), checking that pages don't scroll sideways and the drawer menu works;
-  - checking for console errors on the pages that were opened.
-- The local database has few bookings, requests or tickets, so populated states (tables, timelines, trackers, charts) were also checked by rendering pages with **sample data in memory** (`php artisan tinker` scripts writing temporary `public/_*-preview.html` files). Nothing was saved to the database, and the preview files were deleted afterwards.
-- All Blade templates compile (`php artisan view:cache` succeeds).
-- Screenshots are saved in `.playwright-mcp/` (for example `college-dashboard.png`, `guest-rates.png`, `landing-tracker-type-rm.png`).
-- **Oct 19 – Create Direct Reservation:** checked with Playwright as `adminA@gsuadmin.com` at 1440px and 390px after `npm run build`. The page doesn't scroll sideways on phones, and the field names and ids the script and controller use are unchanged. The form was not submitted.
-- **Oct 19 – the other changes,** each checked end to end with Playwright:
-  - **Others place:** a ticket was sent with a typed place; it showed on the college list, ticket page and admin list. An empty Others box gave one clear error and kept "Others" selected.
-  - **Conversation:** two browsers (college and admin) exchanged messages live in about 10 seconds. Closing the ticket locked the chat on both sides, and a late message was refused.
-  - **Repair lookup:** 5 temporary tickets, one per status, each showed the right title on the landing page. A wrong name or code showed "No match found".
-  - **"Noted by", College:** team members with a position appeared as cards.
-  - **"Noted by", Org:** Someone else saved "Jose Rizal / OIC Dean" and Program Head saved "Engr. Ana Cruz / Program Head". A blank name was refused, and the request page showed "Jose Rizal · OIC Dean".
-  - **Shared tickets:** John saw Carl's ticket with the admin's message and update. On a temporary ticket, an admin reply reached John live, and both John and Carl were notified.
-  - **All Requests:** the two pending requests now show first.
-- **Test data:** every temporary ticket, request, message, notification and test account created for these checks was deleted afterwards. Real data was not changed.
+Run `php artisan test` from the current checkout for the authoritative automated result. The latest recorded run for the tracking-name and booking-flow changes passed **38 tests with 174 assertions**; results can change as code changes.
+
+The public tracker and guest request form were also visually checked with Playwright during the current tracking-name change. See [TESTING_GUIDE.md](TESTING_GUIDE.md) for reproducible feature checks and the UI smoke-test checklist.

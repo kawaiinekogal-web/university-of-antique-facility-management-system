@@ -1,5 +1,7 @@
 # Controller Method Documentation — UA Facility Management System
 
+**Validated:** October 26, 2026. Routes and behavior below refer to the current Laravel web application; `routes/web.php` is authoritative when route details change.
+
 ---
 
 ## 1. `AuthController`
@@ -9,7 +11,7 @@
 |---|---|---|---|
 | `showLogin()` | GET | `/login` | If already authenticated, redirects to the role-appropriate dashboard (`admin.dashboard`, `college.dashboard`, `org.dashboard`, or `home`). Otherwise renders the login view. |
 | `login(Request $request)` | POST | `/login` | Rate-limited login (max 5 attempts per IP per minute). Validates email + password, attempts authentication via `Auth::attempt`. On success: clears rate-limit cache, regenerates session, redirects by role. On failure: increments attempt counter, returns error. |
-| `logout(Request $request)` | POST | `/logout` | Logs out the user, invalidates the session, regenerates the CSRF token, and redirects to the home page. |
+| `logout(Request $request)` | GET or POST | `/logout` | Logs out the user, invalidates the session, regenerates the CSRF token, and redirects to the home page. |
 
 ---
 
@@ -29,9 +31,9 @@
 |---|---|---|---|
 | `index()` | GET | `/admin/facilities` | Lists all facilities ordered by name, paginated (10 per page). |
 | `create()` | GET | `/admin/facilities/create` | Renders the facility creation form. |
-| `store(Request $request)` | POST | `/admin/facilities` | Validates and creates a new facility. Fields: `name`, `location`, `owner_type` (gsu/college/org), `owner_college`, `description`, `is_active`, `availability_status` (available/unavailable/maintenance). Redirects with success message. |
+| `store(StoreFacilityRequest $request)` | POST | `/admin/facilities` | Validates and creates a new facility. Fields: `name`, `location`, `owner_type` (gsu/college/org), `owner_college`, `description`, `is_active`, `availability_status` (available/unavailable/maintenance). Redirects with success message. |
 | `edit(Facility $facility)` | GET | `/admin/facilities/{facility}/edit` | Renders the edit form for a specific facility. |
-| `update(Request $request, Facility $facility)` | PUT | `/admin/facilities/{facility}` | Validates and updates a facility. Protects core seeded facilities from having their `owner_type`/`owner_college` changed. Prevents admin from changing `availability_status` on college-owned facilities. |
+| `update(StoreFacilityRequest $request, Facility $facility)` | PUT | `/admin/facilities/{facility}` | Validates and updates a facility. Protects core seeded facilities from having their `owner_type`/`owner_college` changed. Prevents admin from changing `availability_status` on college-owned facilities. |
 | `destroy(Facility $facility)` | DELETE | `/admin/facilities/{facility}` | Deletes the specified facility. |
 
 ---
@@ -41,10 +43,12 @@
 
 | Method | HTTP | Route | Description |
 |---|---|---|---|
-| `index()` | GET | `/admin/bookings` | Lists all bookings (with requester and facility), ordered by most recent `start_time`, paginated (20 per page). |
+| `index(Request $request)` | GET | `/admin/bookings` | Lists bookings with requester and facilities, paginated (20 per page), with status, facility, month, and search filters. |
+| `createDirect()` | GET | `/admin/bookings/create-direct` | Renders the GSU high-priority reservation form. |
+| `storeDirect(Request $request)` | POST | `/admin/bookings/store-direct` | Requires the admin's explicit account last name and creates a high-priority reservation through `BookingService`; conflicting reservations are moved back to pending and affected requesters are notified. |
 | `edit(Booking $booking)` | GET | `/admin/bookings/{booking}/edit` | Renders the booking edit form, loading all active facilities for the dropdown. |
-| `calendar(Request $request)` | GET | `/admin/calendar` | Month calendar view. Accepts optional `?month=YYYY-MM` query param. Groups bookings by day and counts bookings per facility for the month (only approved/rescheduled). Renders `admin.calendar.index`. |
-| `overview(Request $request)` | GET | `/admin/overview` | Monthly overview chart data. Returns a day-by-day count of approved/rescheduled bookings for the month. Used to render a line chart in `admin.overview.index`. |
+| `calendar(Request $request)` | GET | `/admin/calendar` | Month calendar of `reserved` and `rescheduled` bookings. Accepts month navigation and an optional selected day; includes monthly facility counts. |
+| `overview(Request $request)` | GET | `/admin/overview` | Monthly facility-use chart data based on `reserved`, `rescheduled`, and `completed` bookings. |
 | `update(Request $request, Booking $booking)` | PUT | `/admin/bookings/{booking}` | Admin reschedules/modifies an existing booking. Validates facility, date, start/end time, purpose, reason, and optional equipment quantities (monobloc, table, fan, rostrum, flag, sound, LED). Merges equipment into `additional_details` JSON, sets status to `rescheduled`. Sends a notification to the requester and to other admin accounts for audit. |
 | `cancel(Request $request, Booking $booking)` | POST | `/admin/bookings/{booking}/cancel` | Cancels a booking. Requires a `reason`. Sets status to `cancelled`, stores cancel reason/by/timestamp in `additional_details`. Notifies the requester. |
 
@@ -57,7 +61,10 @@
 |---|---|---|---|
 | `index()` | GET | `/admin/users` | Lists all users ordered by name, paginated (20 per page). |
 | `create()` | GET | `/admin/users/create` | Renders the user creation form. |
-| `store(Request $request)` | POST | `/admin/users` | Creates a new user account. Validates: `name`, `email` (unique), `password` (min 8, confirmed), `role` (admin/college_staff/org_staff), and optionally `college_name` or `organization_name` depending on role. Hashes password before storage. |
+| `store(StoreUserRequest $request)` | POST | `/admin/users` | Creates a role account with validated profile fields, including the separately stored last name. |
+| `edit(User $user)` | GET | `/admin/users/{user}/edit` | Renders the account edit form. |
+| `update(Request $request, User $user)` | PUT | `/admin/users/{user}` | Updates an account's profile and role-specific unit fields. |
+| `deactivate(User $user)` | PATCH | `/admin/users/{user}/deactivate` | Deactivates the account without deleting its history; prevents self-deactivation and delegates cancellation of eligible future work to the account-deactivation service. |
 
 ---
 
@@ -66,25 +73,17 @@
 
 | Method | HTTP | Route | Description |
 |---|---|---|---|
-| `index()` | GET | `/admin/forms/facilities` | Lists all `facilities_utilization` form submissions (with requester), ordered by newest first, paginated (15 per page). |
+| `index(Request $request)` | GET | `/admin/forms/facilities` | Lists and filters `facilities_utilization` submissions by status, facility, activity month, or control number; paginated 15 per page and sorted by workflow status, newest first within each status. |
 | `show(FormSubmission $submission)` | GET | `/admin/forms/facilities/{submission}` | Shows a single facilities utilization submission. Aborts 404 if type mismatch. Loads every requested facility, falling back to legacy `facility_id` payloads. |
-| `approve(FormSubmission $submission)` | POST | `/admin/forms/facilities/{submission}/approve` | Attempts to reserve all requested facilities for every requested day atomically. If any facility is unavailable or a slot conflicts, no bookings are created and the request remains pending. On success, marks the request reserved and notifies the requester. |
-| `disapprove(FormSubmission $submission)` | POST | `/admin/forms/facilities/{submission}/disapprove` | Sets submission status to `disapproved`. Notifies the requester. |
-| `setBooking(FormSubmission $submission)` | POST | `/admin/forms/facilities/{submission}/set-booking` | Converts an approved submission into a `Booking`. Enforces: only approved submissions, at least 30 days lead time, all requested facilities available, and no overlapping active reservations. Creates a booking and notifies the requester. |
+| `approve(FormSubmission $submission)` | POST | `/admin/forms/facilities/{submission}/approve` | Creates the reservation for an eligible request after transactional availability/overlap checks and sets the submission status to `reserved`. For guest requests, payment tracking is separate: an initially `not_required` payment state becomes `pending_payment` after approval. |
+| `disapprove(Request $request, FormSubmission $submission)` | POST | `/admin/forms/facilities/{submission}/disapprove` | Requires a disapproval reason, stores it on the request, and notifies the requester. |
+| `verifyPayment(FormSubmission $submission)` | POST | `/admin/forms/facilities/{submission}/verify-payment` | Marks an uploaded guest receipt as verified. |
+| `setReservation(FormSubmission $submission)` | POST | `/admin/forms/facilities/{submission}/set-reservation` | Supports the separate reservation action for eligible legacy approved/payment-pending submissions, rechecking availability and conflicts transactionally. |
 
 ---
 
-## 7. `Admin\FormReviewController`
-**File:** `app/Http/Controllers/Admin/FormReviewController.php`
-
-| Method | HTTP | Route | Description |
-|---|---|---|---|
-| `index()` | GET | — | Lists all form submissions ordered by newest first (no pagination). Renders `admin.forms.index`. |
-| `show($id)` | GET | — | Shows a single form submission by ID. |
-| `approve(Request $request, $id)` | POST | — | Approves a form submission. Auto-generates a control number (`GSU-000001` format) and merges it into the payload. |
-| `disapprove(Request $request, $id)` | POST | — | Disapproves a form submission. Stores the disapproval reason in the payload. |
-| `setBooking($id)` | POST | — | Converts an approved form into a Booking. Checks for time-slot conflicts and facility availability. Creates the booking with equipment and control number in `additional_details`. Marks submission as `converted`. |
-| `cancel($id)` | POST | — | Sets the submission status to `cancelled`. |
+## 7. Retired controller reference
+The former `Admin\FormReviewController` reference is retired: it is not part of the current controller set or route table. Facility-request review is handled by `Admin\FormSubmissionController` above.
 
 ---
 
@@ -159,7 +158,8 @@
 
 | Method | HTTP | Route | Description |
 |---|---|---|---|
-| `calendar(Request $request)` | GET | `/college/calendar` | Read-only month calendar for college staff. Shows bookings the user requested plus bookings for any facility owned by their college. Includes per-facility booking counts for the month. Accepts optional `?month=YYYY-MM`. |
+| `index(Request $request)` | GET | `/college/bookings` | Lists the signed-in user's bookings with the available status/date filters. |
+| `calendar(Request $request)` | GET | `/college/calendar` | Read-only month calendar of all `reserved` and `rescheduled` bookings, with monthly facility counts. |
 
 ---
 
@@ -168,8 +168,8 @@
 
 | Method | HTTP | Route | Description |
 |---|---|---|---|
-| `createFacilities()` | GET | `/college/requests/facilities` | Renders the Facilities Utilization request form. Loads GSU-managed facilities and the user's college-owned active facilities for selection. |
-| `storeFacilities(Request $request)` | POST | `/college/requests/facilities` | Submits a facilities utilization request. Validates: `date_activity` (at least 30 days in the future), optional continuous `date_end` (up to 14 days total), `start_time`, `end_time`, one or more `facility_ids`, `purpose`, and optional equipment quantities. Rejects overlapping active reservations for any selected facility/date while allowing adjacent times. Creates a pending `FormSubmission` and notifies the requester and admins. |
+| `createFacilities()` | GET | `/college/requests/facilities` | Renders the Facilities Utilization request form. Loads all active GSU- and college-owned facilities for selection, with the signed-in user's college facilities also provided as a hint. |
+| `storeFacilities(Request $request)` | POST | `/college/requests/facilities` | Submits a facilities utilization request. The form request uses the signed-in account's separately recorded last name as `requester_last_name`; it is not inferred from the full name. Validates: `date_activity` (at least 30 days in the future), optional continuous `date_end` (up to 14 days total), `start_time`, `end_time`, one or more `facility_ids`, `purpose`, and optional equipment quantities. Rejects overlapping active reservations for any selected facility/date while allowing adjacent times. Creates a pending `FormSubmission` and notifies the requester and admins. |
 | `indexFacilities()` | GET | `/college/requests` | Lists the current college staff user's own facilities utilization submissions, paginated (10 per page). |
 | `showFacilities(FormSubmission $submission)` | GET | `/college/requests/facilities/{submission}` | Shows a single request's details. Aborts 404 if the submission type doesn't match or it doesn't belong to the current user. Loads the associated facility from the payload. |
 
@@ -189,7 +189,8 @@
 
 | Method | HTTP | Route | Description |
 |---|---|---|---|
-| `calendar(Request $request)` | GET | `/org/bookings` | Read-only month calendar for org staff. Shows only the bookings requested by the current user. Accepts optional `?month=YYYY-MM`. |
+| `index(Request $request)` | GET | `/org/bookings` | Lists the signed-in user's bookings with the available status/date filters. |
+| `calendar(Request $request)` | GET | `/org/calendar` | Read-only month calendar of all `reserved` and `rescheduled` bookings. |
 
 ---
 
@@ -198,8 +199,8 @@
 
 | Method | HTTP | Route | Description |
 |---|---|---|---|
-| `createFacilities()` | GET | `/org/requests/facilities` | Renders the Facilities Utilization request form for org staff. Loads GSU-managed facilities and the user's organization-owned active facilities for selection. |
-| `storeFacilities(Request $request)` | POST | `/org/requests/facilities` | Submits a facilities utilization request. Uses the same 30-day minimum notice, 14-day maximum range, multi-facility selection, and blocking overlap validation as College requests. Builds a JSON payload with `requester_unit` set to the user's `organization_name`. Creates a pending `FormSubmission` with `requester_type=org` and notifies the requester and admins. |
+| `createFacilities()` | GET | `/org/requests/facilities` | Renders the Facilities Utilization request form for org staff. Loads all active facilities, including college-owned facilities, for selection. |
+| `storeFacilities(Request $request)` | POST | `/org/requests/facilities` | Submits a facilities utilization request. Uses the account's separately recorded tracking last name (not a surname parsed from the full name), the same 30-day minimum notice, 14-day maximum range, multi-facility selection, and blocking overlap validation as College requests. Builds a JSON payload with `requester_unit` set to the user's `organization_name`. Creates a pending `FormSubmission` with `requester_type=org` and notifies the requester and admins. |
 | `indexFacilities()` | GET | `/org/requests/facilities/index` | Lists the current org staff user's own facilities utilization submissions, paginated (10 per page). |
 
 ---
@@ -211,7 +212,68 @@ Public controller used by the homepage tracker. The status lookup does not requi
 
 | Method | HTTP | Route | Description |
 |---|---|---|---|
-| `show(Request $request)` | GET | `/track/ticket` (`ticket.lookup`) | Accepts `type` (`FM`, `BK`, or `RM`), `code`, and `last_name`. Looks up a facility utilization submission, booking, or maintenance ticket only when the supplied surname matches the requester's name. Returns status and relevant schedule/request details without requester identity. Missing surnames return `needs_last_name`; unmatched codes or surnames return the same not-found response. |
+| `show(Request $request)` | GET | `/track/ticket` (`ticket.lookup`) | Accepts `type` (`FM`, `BK`, or `RM`), `code`, and `last_name`. New FM records use the separately stored `requester_last_name` or the account's explicit `last_name`; guest bookings resolve the linked FM submission's tracking name. Maintenance tickets use the requester's explicit account last name. Explicit values are compared as whole values after case/whitespace normalization and treating commas/periods as spaces; partial/suffix-only matches are rejected. Records without an explicit value retain legacy matching against the full name. Returns status and relevant details without requester identity. Missing names return `needs_last_name`; unmatched codes or names return the same not-found response. |
 | `uploadPayment(Request $request, FormSubmission $submission)` | POST | `/track/ticket/{submission}/payment` (`ticket.payment.upload`) | Signed, rate-limited endpoint for approved guest facility requests only. Validates a JPG/JPEG, PNG, or PDF receipt up to 10 MiB, stores it on the private payment-receipts disk, and changes payment status to `payment_uploaded`. |
 
 For an approved guest facility request, `show` may return a temporary signed PDF URL (30-minute expiry) and, when payment is still due, a temporary signed receipt-upload URL (15-minute expiry). Booking and maintenance lookups return status/details only; none of the status lookup results permit editing the underlying record.
+
+## 23. `PublicFacilityRequestController`
+**File:** `app/Http/Controllers/PublicFacilityRequestController.php`
+
+| Method | HTTP | Route | Description |
+|---|---|---|---|
+| `create()` | GET | `/request-facility` | Renders the public guest request form with active public facilities. No account or sign-in is required. |
+| `store(StoreFacilitiesUtilizationRequest $request)` | POST | `/request-facility` | Validates visitor details and facility-request fields, files the request under the shared non-interactive walk-in account, stores the visitor's full name and explicit tracking last name in the submission payload, and emails the tracking code. The receipt is not required at initial submission; payment may be requested after GSU review. |
+| `submitted(FormSubmission $submission)` | GET | `/request-facility/submitted/{submission}` | Shows the confirmation only when the submission ID is present in the current visitor session. |
+
+## 24. `PaymentReceiptController`
+**File:** `app/Http/Controllers/PaymentReceiptController.php`
+
+| Method | HTTP | Route | Description |
+|---|---|---|---|
+| `show(FormSubmission $submission)` | GET | `/forms/facilities/{submission}/payment-receipt` | Streams the receipt only to an admin, the authenticated requester, or the public session that submitted the request. |
+| `attachment(FormSubmission $submission, int $index)` | GET | `/forms/facilities/{submission}/attachments/{index}` | Streams a supporting upload under the same authorization checks as receipt downloads. |
+
+Downloads are private and non-cacheable. New uploads use the private `payment_receipts` disk; legacy paths are accepted only from their expected storage prefixes.
+
+## Other current controllers
+
+- `Admin\MonthlyRecordsController` serves `/admin/monthly-records` and its chart export route.
+- `Admin\SignatoryController` serves administrator CRUD for signatories.
+- `College\UserController` and `Org\UserController` (via `ManagesUnitUsers`) manage accounts within their own team; account removal is deactivation, not deletion.
+- `PublicCalendarController@index` serves the public calendar at `/`.
+
+---
+
+## 20. `Admin\MaintenanceTicketController`
+**File:** `app/Http/Controllers/Admin/MaintenanceTicketController.php`
+
+| Method | HTTP | Route | Description |
+|---|---|---|---|
+| `index()` | GET | `/admin/maintenance-tickets` | Lists active (`notified`, `pending`, `ongoing`) and completed (`success`, `failed`) maintenance tickets in separate paginated groups. |
+| `show(MaintenanceTicket $ticket)` | GET | `/admin/maintenance-tickets/{ticket}` | Shows ticket, requester, facility/location, and college conversation history. |
+| `update(Request $request, MaintenanceTicket $ticket)` | PUT | `/admin/maintenance-tickets/{ticket}` | Validates status (`pending`, `ongoing`, `success`, `failed`) and optional admin remarks. Sets or clears `completed_at`; notifies the requester and college team when applicable. |
+| `messages(Request $request, MaintenanceTicket $ticket)` | GET | `/admin/maintenance-tickets/{ticket}/messages` | Returns new conversation messages as JSON for an authorized admin on a college ticket. |
+| `sendMessage(Request $request, MaintenanceTicket $ticket)` | POST | `/admin/maintenance-tickets/{ticket}/messages` | Adds a validated message, notifies the college team, and is limited to 30 requests per minute. Closed-ticket conversations are read-only. |
+
+## 21. `College\MaintenanceTicketController`
+**File:** `app/Http/Controllers/College/MaintenanceTicketController.php`
+
+| Method | HTTP | Route | Description |
+|---|---|---|---|
+| `index()` | GET | `/college/maintenance-requests` | Lists the requester's college team's tickets, not only tickets created by the current account. |
+| `create()` | GET | `/college/maintenance-requests/create` | Displays active facilities and the option to enter an unlisted location. |
+| `store(Request $request)` | POST | `/college/maintenance-requests` | Requires the authenticated account's explicit tracking last name, validates the facility or custom place, subject, and issue description, then creates an `RM-…` ticket and notifies the requester and admins. |
+| `show(MaintenanceTicket $ticket)` | GET | `/college/maintenance-requests/{ticket}` | Allows any member of the ticket requester's college team to view the ticket and conversation. |
+| `messages(Request $request, MaintenanceTicket $ticket)` | GET | `/college/maintenance-requests/{ticket}/messages` | Returns new college-team conversation messages as JSON. |
+| `sendMessage(Request $request, MaintenanceTicket $ticket)` | POST | `/college/maintenance-requests/{ticket}/messages` | Adds a message and notifies GSU and other college-team members; limited to 30 requests per minute. Closed-ticket conversations are read-only. |
+
+## 22. `Org\MaintenanceTicketController`
+**File:** `app/Http/Controllers/Org/MaintenanceTicketController.php`
+
+| Method | HTTP | Route | Description |
+|---|---|---|---|
+| `index()` | GET | `/org/maintenance-requests` | Lists the authenticated organization's own maintenance tickets. |
+| `create()` | GET | `/org/maintenance-requests/create` | Displays the new repair request form. |
+| `store(Request $request)` | POST | `/org/maintenance-requests` | Requires the account's explicit tracking last name and validates the active facility, subject, and issue description. Creates an `RM-…` ticket and notifies the requester and admins. |
+| `show(MaintenanceTicket $ticket)` | GET | `/org/maintenance-requests/{ticket}` | Shows a ticket only to its requester. Organization tickets do not use the college-team conversation feature. |

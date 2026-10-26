@@ -7,7 +7,7 @@
 **Table:** `users`
 
 ### Description
-The central authentication model. Extends Laravel's `Authenticatable` base. Represents all system users — admins (GSU staff), college staff, organization staff, guests, and viewers. `last_name` is stored separately from `name` so status lookups do not infer a surname from culturally variable full-name formats.
+The central authentication model. Extends Laravel's `Authenticatable` base. Represents staff accounts and the shared non-interactive walk-in account used for public submissions. `last_name` is stored separately from `name` so status lookups do not infer a surname from full-name formats.
 
 ### Schema
 
@@ -20,14 +20,18 @@ The central authentication model. Extends Laravel's `Authenticatable` base. Repr
 | `email_verified_at` | timestamp | nullable | Email verification timestamp |
 | `password` | string | required, hashed | Bcrypt-hashed password |
 | `remember_token` | string | nullable | "Remember me" session token |
-| `role` | string | default `'viewer'` | One of: `admin`, `college_staff`, `org_staff`, `viewer` |
+| `role` | string | default `'viewer'` | Roles include `admin`, `college_staff`, `org_staff`, `guest`, and legacy/general `viewer`; public guests do not sign in |
 | `college_name` | string | nullable | College affiliation (used when `role = college_staff`) |
 | `organization_name` | string | nullable | Organization affiliation (used when `role = org_staff`) |
+| `college_id` | bigint | nullable FK → `colleges.id` | Linked college for scoped staff data |
+| `position` | string | nullable | Staff position used by team workflows |
+| `contact_number` | string | nullable | Staff contact number |
+| `is_active` | boolean | default `true` | Active-account gate; deactivation preserves the user and history |
 | `created_at` | timestamp | auto | Record creation time |
 | `updated_at` | timestamp | auto | Record update time |
 
 ### Fillable
-`name`, `last_name`, `email`, `password`, `role`, `college_name`, `organization_name`
+`name`, `last_name`, `contact_number`, `email`, `password`, `role`, `college_name`, `college_id`, `organization_name`, `position`
 
 The additive migration leaves `last_name` null for existing accounts; legacy lookups continue using the former full-name matching until the account is updated with its explicit tracking last name.
 
@@ -37,6 +41,7 @@ The additive migration leaves `last_name` null for existing accounts; legacy loo
 ### Casts
 - `email_verified_at` → `datetime`
 - `password` → `hashed`
+- `is_active` → `boolean`
 
 ### Relationships
 | Relationship | Type | Related Model | Foreign Key | Description |
@@ -46,6 +51,7 @@ The additive migration leaves `last_name` null for existing accounts; legacy loo
 | `staffAssignments()` | hasMany | `StaffAssignment` | `staff_id` | Maintenance tasks assigned to this staff member |
 | `maintenanceLogs()` | hasMany | `MaintenanceLog` | `staff_id` | Work logs recorded by this staff member |
 | `notifications()` | hasMany | `Notification` | `user_id` | Notifications for this user |
+| `college()` | belongsTo | `College` | `college_id` | The user's college, when assigned |
 
 ### Traits
 `HasFactory`, `Notifiable`
@@ -68,6 +74,7 @@ Represents a bookable university facility (e.g., halls, AVRs, gyms, track oval).
 | `location` | string | nullable | Campus/building location |
 | `owner_type` | string | default `'gsu'` | Ownership: `gsu`, `college`, or `org` |
 | `owner_college` | string | nullable | College name (for college-owned facilities) |
+| `college_id` | bigint | nullable FK → `colleges.id` | Linked college for scoped facilities |
 | `description` | text | nullable | Description of the facility |
 | `is_active` | boolean | default `true` | Whether the facility is active/visible |
 | `availability_status` | string(20) | default `'available'` | One of: `available`, `unavailable`, `maintenance` |
@@ -75,7 +82,7 @@ Represents a bookable university facility (e.g., halls, AVRs, gyms, track oval).
 | `updated_at` | timestamp | auto | Record update time |
 
 ### Fillable
-`name`, `location`, `owner_type`, `owner_college`, `description`, `is_active`, `availability_status`
+`name`, `location`, `owner_type`, `owner_college`, `college_id`, `description`, `is_active`, `availability_status`
 
 ### Casts
 - `is_active` → `boolean`
@@ -83,13 +90,14 @@ Represents a bookable university facility (e.g., halls, AVRs, gyms, track oval).
 ### Relationships
 | Relationship | Type | Related Model | Foreign Key | Description |
 |---|---|---|---|---|
-| `bookings()` | hasMany | `Booking` | `facility_id` | All bookings for this facility |
+| `bookings()` | belongsToMany | `Booking` | `booking_facility` pivot | All reservations including this facility |
 | `maintenanceTickets()` | hasMany | `MaintenanceTicket` | `facility_id` | Maintenance tickets filed for this facility |
+| `college()` | belongsTo | `College` | `college_id` | Linked college, when present |
 
 ### Custom Methods
 | Method | Returns | Description |
 |---|---|---|
-| `isCoreFacility()` | `bool` | Returns `true` if the facility name matches one of the 11 official seeded UA facilities (BUSALAN HALL, AVR-USA HALL, E-HUB, BALAY NI JUAN, ICT AVR, CEA AVR, CBA AVR, NEW AVR, GRAND STAND, COVERED GYM, TRACK OVAL). Used to prevent changing ownership of core facilities. |
+| `isCoreFacility()` | `bool` | Returns `true` when the name matches the configured core-facility list. |
 
 ### Traits
 `HasFactory`
@@ -135,7 +143,7 @@ None defined.
 **Table:** `bookings`
 
 ### Description
-Represents a facility reservation. Created when an admin converts an approved form submission into a booking, or when an admin creates one directly. The public tracker identifies bookings by the unique `booking_code` and requires the requester's last name before returning status.
+Represents a facility reservation. A request may create one booking per event day linked to one or more facilities through the pivot table; admins may also create high-priority direct reservations. The public tracker identifies bookings by `booking_code` and requires the requester's tracking last name.
 
 ### Schema
 
@@ -143,12 +151,11 @@ Represents a facility reservation. Created when an admin converts an approved fo
 |---|---|---|---|
 | `id` | bigint (auto) | PK | Primary key |
 | `requester_id` | bigint | FK → `users.id`, cascade delete | User who requested the booking |
-| `facility_id` | bigint | FK → `facilities.id`, cascade delete | Booked facility |
 | `start_time` | datetime | required | Booking start date/time |
 | `end_time` | datetime | required | Booking end date/time |
 | `requester_type` | string | required | Type of requester: `college` or `org` |
 | `requester_unit` | string | nullable | Unit name (e.g., "College of Engineering", "Student Council") |
-| `status` | string | default `'pending'` | One of: `pending`, `approved`, `denied`, `rescheduled`, `cancelled` |
+| `status` | string | default `'pending'` | Current reservation states include `pending`, `reserved`, `rescheduled`, `cancelled`, and `completed`; legacy values may still exist during normalization. |
 | `request_method` | string | nullable | How the request was made (e.g., `online_form`) |
 | `purpose` | text | required | Purpose/reason for the booking |
 | `additional_details` | text | nullable | JSON-encoded extra data (equipment quantities, reschedule notes, cancel reasons) |
@@ -159,7 +166,7 @@ Represents a facility reservation. Created when an admin converts an approved fo
 | `updated_at` | timestamp | auto | Record update time |
 
 ### Fillable
-`requester_id`, `facility_id`, `start_time`, `end_time`, `requester_type`, `requester_unit`, `status`, `request_method`, `purpose`, `additional_details`, `requested_at`, `approved_at`, `booking_code`
+`requester_id`, `start_time`, `end_time`, `requester_type`, `requester_unit`, `status`, `request_method`, `purpose`, `additional_details`, `requested_at`, `approved_at`, `booking_code`
 
 ### Casts
 - `start_time` → `datetime`
@@ -174,7 +181,7 @@ Represents a facility reservation. Created when an admin converts an approved fo
 | `facilities()` | belongsToMany | `Facility` | `booking_facility.booking_id` | Facilities included in this reservation |
 | `maintenanceTickets()` | hasMany | `MaintenanceTicket` | `booking_id` | Maintenance tickets associated with this booking |
 
-The `booking_facility` pivot is the active many-to-many association and supports reservations covering multiple facilities. The legacy `bookings.facility_id` column remains in the table schema but is not the model's current facility relationship. For a booking created from an FM request, the linked submission's `requester_last_name` is also used for exact status verification, including walk-in guest bookings attached to a shared account.
+The `booking_facility` pivot is the many-to-many association and supports reservations covering multiple facilities. The legacy `bookings.facility_id` column was removed by migration `2026_05_24_132456_remove_facility_id_from_bookings_table.php`. For a booking created from an FM request, the linked submission's `requester_last_name` is also used for exact status verification, including walk-in guest bookings attached to a shared account.
 
 ### Traits
 `HasFactory`
@@ -223,8 +230,23 @@ Represents a repair/maintenance request for a facility. Can optionally be linked
 | `facility()` | belongsTo | `Facility` | `facility_id` | The facility the ticket is for |
 | `requester()` | belongsTo | `User` | `requester_id` | The user who filed the ticket |
 | `booking()` | belongsTo | `Booking` | `booking_id` | The related booking (if any) |
+| `messages()` | hasMany | `MaintenanceTicketMessage` | `maintenance_ticket_id` | College-ticket conversation messages, ordered by ID |
 | `staffAssignments()` | hasMany | `StaffAssignment` | `maintenance_ticket_id` | Staff members assigned to this ticket |
 | `maintenanceLogs()` | hasMany | `MaintenanceLog` | `maintenance_ticket_id` | Work logs for this ticket |
+
+### Maintenance ticket conversation model
+
+`MaintenanceTicketMessage` stores the college-to-GSU conversation:
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | bigint (auto) | PK | Message identifier and ordering key |
+| `maintenance_ticket_id` | bigint | FK → `maintenance_tickets.id`, cascade delete | Parent ticket |
+| `user_id` | bigint | nullable FK → `users.id`, null on delete | Message author, when the account remains available |
+| `body` | text | required | Message body |
+| `created_at`, `updated_at` | timestamp | auto | Message timestamps |
+
+The conversation is available to GSU admins and members of the ticket's college team. Organization tickets do not use this conversation feature. Tickets in `success` or `failed` status have a read-only conversation.
 
 ### Traits
 `HasFactory`
@@ -353,10 +375,10 @@ Tracks a facility utilization submission through its lifecycle from pending to a
 | `requester_id` | bigint | FK → `users.id`, cascade delete | User who submitted the form |
 | `requester_type` | string | required | Requester type: `college`, `org`, `admin`, or `guest` |
 | `requester_unit` | string | nullable | College name or organization name |
-| `status` | string | default `'pending'` | One of: `pending`, `approved`, `disapproved`, `cancelled`, `booked` |
+| `status` | string | default `'pending'` | Current workflow values include `pending`, `reserved`, `disapproved`, and `cancelled`; `approved` and `pending_payment` may appear on legacy submissions, and `booked` is normalized to `reserved`. |
 | `payload` | json | required | Full form data as JSON (see Payload Structure below) |
-| `payment_attachment` | string | nullable | Private storage path for a guest request's uploaded receipt |
-| `payment_status` | string | default `not_required` | Guest receipt workflow status (for example `pending_payment`, `payment_uploaded`, `payment_verified`, `not_required`) |
+| `payment_attachment` | string | nullable | Private storage path for an uploaded receipt |
+| `payment_status` | string | default `not_required` | Payment workflow state: `not_required`, `pending_payment`, `payment_uploaded`, or `payment_verified`. A receipt is not required when a public request is first submitted. |
 | `created_at` | timestamp | auto | Record creation time |
 | `updated_at` | timestamp | auto | Record update time |
 
@@ -369,8 +391,10 @@ Tracks a facility utilization submission through its lifecycle from pending to a
   "requester_unit": "College of Engineering",
   "date_activity": "2026-06-01",
   "time_range": { "start": "08:00", "end": "12:00" },
-  "facility_id": 3,
-  "venue_others": null,
+  "facility_ids": [3, 4],
+  "facility_names": ["BUSALIAN HALL", "CEA AVR"],
+  "date_end": "2026-06-03",
+  "requester_last_name": "User",
   "purpose": "Seminar on AI",
   "equipment": {
     "monobloc_chair": 50,
@@ -384,7 +408,7 @@ Tracks a facility utilization submission through its lifecycle from pending to a
 }
 ```
 
-New internal submissions save the account's explicit `last_name` as `requester_last_name` in the payload. Public guest submissions use `requester_type=guest` and are linked to a shared walk-in account; the visitor's full name and explicitly entered tracking last name (`requester_last_name`) are stored in the payload. New lookups compare that explicit value exactly (case and surrounding whitespace normalized); they do not infer a last name from the full name. Existing records without an explicit last name retain the legacy full-name matching behavior. A matching FM lookup returns status and relevant schedule details, not requester identity. Only approved guest facility submissions may receive temporary signed PDF/payment action URLs.
+New internal submissions save the account's explicit `last_name` as `requester_last_name` in the payload. Public guest submissions use `requester_type=guest` and are linked to a shared walk-in account; the visitor's full name and explicitly entered tracking last name (`requester_last_name`) are stored in the payload. New lookups compare that explicit value as a whole after case/whitespace normalization and treating commas/periods as spaces; they do not infer a last name from the full name. Partial/suffix-only matches are rejected. Existing records without an explicit last name retain the legacy full-name matching behavior. A matching FM lookup returns status and relevant schedule details, not requester identity. Approved guest facility submissions may receive temporary signed PDF/payment action URLs. Payment state is stored separately from request status; receipt upload is available after approval when payment is applicable.
 
 ### Fillable
 `type`, `requester_id`, `requester_type`, `requester_unit`, `status`, `payload`
@@ -440,24 +464,61 @@ None (extends base `Model`).
 
 ---
 
+## 11. `College`
+**File:** `app/Models/College.php`
+**Table:** `colleges`
+
+Stores college records used to scope users, facilities, and signatories.
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | bigint (auto) | Primary key |
+| `name` | string | College name |
+| `short_name` | string | Nullable short label |
+| `description` | text | Nullable description |
+
+Relationships: `users()`, `facilities()`, and `signatories()` are `hasMany` relations.
+
+## 12. `Signatory`
+**File:** `app/Models/Signatory.php`
+**Table:** `signatories`
+
+Stores selectable signatories used by facility-request forms. Fillable fields are `type`, `name`, `unit`, `college_id`, and `is_active`; `is_active` is cast to boolean. `college()` belongs to `College`, and `scopeForCollege()` matches by college ID or legacy unit name.
+
+## 13. `MaintenanceTicketMessage`
+**File:** `app/Models/MaintenanceTicketMessage.php`
+**Table:** `maintenance_ticket_messages`
+
+Stores messages between a college team and GSU for a maintenance ticket. Fillable fields are `maintenance_ticket_id`, `user_id`, and `body`. `ticket()` and `user()` are `belongsTo` relations. Ticket access is scoped in the controllers; organization tickets do not use this conversation workflow.
+
+---
+
 ## Entity Relationship Summary
 
 ```
+College ──┬── hasMany ──→ User
+          ├── hasMany ──→ Facility
+          └── hasMany ──→ Signatory
+
 User ──┬── hasMany ──→ Booking (requester_id)
        ├── hasMany ──→ MaintenanceTicket (requester_id)
        ├── hasMany ──→ StaffAssignment (staff_id)
        ├── hasMany ──→ MaintenanceLog (staff_id)
        └── hasMany ──→ Notification (user_id)
 
-Facility ──┬── hasMany ──→ Booking (facility_id)
+Facility ──┬── belongsTo ──→ College
+           ├── belongsToMany ──→ Booking (booking_facility)
            └── hasMany ──→ MaintenanceTicket (facility_id)
 
+Booking ──── belongsToMany ──→ Facility (booking_facility)
 Booking ──── hasMany ──→ MaintenanceTicket (booking_id)
 
 MaintenanceTicket ──┬── hasMany ──→ StaffAssignment (maintenance_ticket_id)
                     └── hasMany ──→ MaintenanceLog (maintenance_ticket_id)
+                    └── hasMany ──→ MaintenanceTicketMessage (maintenance_ticket_id)
 
 FormSubmission ──── belongsTo ──→ User (requester_id)
-FormControl ──── (standalone, no relationships)
+Signatory ──── belongsTo ──→ College
+FormControl ──── (standalone)
 Equipment ──── (standalone, no relationships)
 ```

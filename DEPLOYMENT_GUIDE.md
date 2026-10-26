@@ -1,310 +1,97 @@
 # UA Facility Management System — Deployment Guide
 
-## Overview
+This is a Laravel web application. A normal deployment runs PHP/Laravel, MySQL, and a web server; desktop or mobile wrappers are optional clients and are not required to operate the web system.
 
-Configuration is driven by environment variables. You can move between development, LAN, and production without changing application code—only `.env` and redeployed binaries.
+## Requirements
 
-The platform includes:
+- PHP 8.2+ with the extensions required by Laravel and the Composer dependencies.
+- Composer and Node.js/npm for installing dependencies and building assets.
+- MySQL or compatible MariaDB.
+- Nginx or Apache configured to serve the repository's `public/` directory over HTTPS.
+- LibreOffice headless if the deployment must convert generated DOCX files to PDF.
 
-- **Laravel backend** — web application, hidden portal entry, and dashboards
-- **Legacy desktop launchers** — optional clients retained only for compatibility
-- **Optional mobile WebView clients** — if you ship them separately, use the same `FMS_LOGIN_URL` and `FMS_ACCESS_TOKEN` as Laravel
+## Configure the environment
 
-### Legacy data normalization
-
-- The app includes a migration that converts old `bookings.status = 'booked'` (and any `form_submissions.status = 'booked'`) to `reserved`.
-- On boot, `AppServiceProvider` additionally:
-  - Normalizes any leftover `booked` rows to `reserved`.
-  - Marks `reserved` bookings with `end_time < now()` as `completed`.
-
-This ensures your production environment never has mixed `booked` and `reserved` statuses and that historical reservations transition to `completed` automatically.
-
-## Environment variables
-
-### Security and portal access
+Create a production `.env` from `.env.example` and set a unique application key, database credentials, HTTPS application URL, mail configuration, and any deployment-specific storage settings. Keep `.env` out of source control and do not reuse sample or development credentials.
 
 ```env
-# URL parameter required to open /fms-portal-entry
-FMS_ACCESS_TOKEN=UA-FMS-ACCESS-2025
-
-# Base URL for portal entry (no query string)
-FMS_LOGIN_URL=http://127.0.0.1:8000/fms-portal-entry
-
-# The following values are legacy and only needed for the older desktop launcher flow:
-# FMS_LAUNCHER_SECRET=UA-FMS-2025
-# FMS_ADMIN_SECRET=UA-ADMIN-2025
-# FMS_COLLEGE_SECRET=UA-COLLEGE-2025
-# FMS_ORG_SECRET=UA-ORG-2025
-```
-
-### Development (`.env`)
-
-```env 
-FMS_ACCESS_TOKEN=UA-FMS-ACCESS-2025
-FMS_LOGIN_URL=http://127.0.0.1:8000/fms-portal-entry
-
-# Optional legacy values for desktop launchers:
-# FMS_LAUNCHER_SECRET=UA-FMS-2025
-# FMS_ADMIN_SECRET=UA-ADMIN-2025
-# FMS_COLLEGE_SECRET=UA-COLLEGE-2025
-# FMS_ORG_SECRET=UA-ORG-2025
-```
-
-### Production (`.env`)
-
-```env
-FMS_ACCESS_TOKEN=PROD-ACCESS-CHANGE-ME
-FMS_LOGIN_URL=https://your-domain.edu.ph/fms-portal-entry
-APP_URL=https://your-domain.edu.ph
+APP_ENV=production
 APP_DEBUG=false
+APP_URL=https://your-domain.example
+APP_KEY=<generate-a-unique-key-with-artisan>
 
-# Optional legacy values for desktop launchers:
-# FMS_LAUNCHER_SECRET=PROD-LAUNCHER-CHANGE-ME
-# FMS_ADMIN_SECRET=PROD-ADMIN-CHANGE-ME
-# FMS_COLLEGE_SECRET=PROD-COLLEGE-CHANGE-ME
-# FMS_ORG_SECRET=PROD-ORG-CHANGE-ME
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=<production-database>
+DB_USERNAME=<least-privilege-database-user>
+DB_PASSWORD=<database-password>
+
+MAIL_MAILER=smtp
+MAIL_HOST=<smtp-host>
+MAIL_PORT=<smtp-port>
+MAIL_USERNAME=<smtp-user>
+MAIL_PASSWORD=<smtp-password>
+MAIL_FROM_ADDRESS=<verified-sender>
 ```
 
-See `dump/env-production.example` for a fuller production template (database, mail, etc.).
+The `FMS_LOGIN_URL` and `FMS_ACCESS_TOKEN` variables remain in `.env.example` for legacy portal-entry integrations. The current `routes/web.php` does not register `/fms-portal-entry`, and `LoginAccessMiddleware` is not registered in the current middleware configuration. The normal web workflow is `/login` with Laravel sessions and role middleware; do not treat those legacy variables as active protection for current web routes. If maintaining a separate integration, verify its route and middleware in that deployment, then use a unique secret over HTTPS. Do not publish tokens in documentation, source, launcher binaries, or screenshots.
 
-## Deployment steps
-
-### 1. Environment setup
-
-```bash
-copy .env.example .env
-composer install
-php artisan key:generate
-```
-
-Edit `.env` with database, `APP_URL`, and all `FMS_*` values.
-
-### 2. Update security values for production
-
-Change every default token and secret. Keep these aligned for the portal entry URL and any legacy clients.
-
-| Variable | Purpose |
-|----------|---------|
-| `FMS_ACCESS_TOKEN` | Required on portal entry URL; validated by Laravel middleware |
-| `FMS_LOGIN_URL` | Base portal entry URL |
-| `FMS_ADMIN_SECRET` | Legacy admin launcher gate key |
-| `FMS_COLLEGE_SECRET` | Legacy college launcher gate key |
-| `FMS_ORG_SECRET` | Legacy org launcher gate key |
-
-### 3. Legacy desktop launcher support
-
-The current deployment path is the Laravel web portal. The legacy desktop launcher build process is retained for compatibility, but it is not required for normal deployment.
-
-If you still need to support legacy launchers, see `legacy/LAUNCHER_README.md` for build and role mapping details.
-
-### 4. Laravel deployment
+## Deploy Laravel
 
 ```bash
 composer install --no-dev --optimize-autoloader
+npm ci
+npm run build
 php artisan migrate --force
-php artisan config:clear
-php artisan cache:clear
-php artisan view:clear
+php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 ```
 
-Configure your web server (Apache/Nginx) to point at `public/` and terminate TLS.
+Generate `APP_KEY` with `php artisan key:generate` only for a new installation; preserve the existing key during routine deploys or encrypted/session data may become unreadable. Configure PHP-FPM/web-server permissions so `storage/` and `bootstrap/cache/` are writable by the application service user. Point the virtual host document root at `public/`, enable TLS, and ensure `APP_DEBUG=false`.
 
-### Local receipt and attachment storage
+Run `php artisan db:seed` only when intentionally setting up development/sample data. Do not seed sample accounts into production.
 
-Payment receipts and supporting documents are stored on the Laravel server's local filesystem, outside the public web root. They are not served from `/storage`; the application streams them from authorization-checked routes with `private, no-store` cache headers. This prevents uploads from being exposed by a public URL or interpreted as executable files. Original files are preserved without image conversion.
+## Private receipts and supporting files
 
-In development, the default directory is `storage/app/private/payment-receipts`. For production, configure a persistent path outside the deployment/release directory:
+New receipt and attachment uploads use the private local payment-receipts disk, outside the public web root. They are streamed by authorization-checked application routes; do not create a public symlink or web-server alias for this storage.
+
+For durable production storage, configure a persistent directory outside the release directory:
 
 ```env
 PAYMENT_RECEIPTS_PATH=/var/lib/ua-fms/payment-receipts
 ```
 
-Create the directory for the PHP-FPM user (replace `www-data` with the configured service user if needed). Laravel creates upload subdirectories and files with private `0700`/`0600` permissions:
+Create it with ownership for the PHP-FPM user and restrictive permissions. Back up this directory together with the database. Keep legacy receipt files available to the authorized download path until they have been migrated and verified.
 
-```bash
-sudo install -d -o www-data -g www-data -m 0700 /var/lib/ua-fms/payment-receipts
+The form accepts a receipt and up to 10 supporting files, each up to 10 MiB. Set PHP and web-server request limits to allow the combined maximum payload plus multipart overhead; the existing deployment guide configuration uses at least `120M` for `post_max_size` and the Nginx client body limit, with `upload_max_filesize=10M` and `max_file_uploads>=11`.
+
+## Background processes and monitoring
+
+The project configures database-backed queue/session/cache drivers in `.env.example`. If the deployed features enqueue queued jobs, run and supervise a Laravel queue worker.
+
+Laravel's scheduler runs the hourly `bookings:normalize-and-complete` task. Configure the system cron to invoke the scheduler every minute from the release directory:
+
+```cron
+* * * * * cd /path/to/ua-fms && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Uploads accept one required JPG/JPEG, PNG, or PDF receipt and up to 10 optional supporting files in those same formats. Each file's detected MIME type is checked and each file is limited to 10 MiB. Names are generated by Laravel rather than taken from the client. The maximum request can contain 11 files, so set PHP's `upload_max_filesize` to `10M`, `post_max_size` to at least `120M`, `max_file_uploads` to at least `11`, and Nginx's `client_max_body_size` to at least `120m` so all allowed files plus multipart overhead can reach Laravel. Keep the public request throttling enabled to limit upload bursts.
+Monitor Laravel logs, disk space, database health, and the private upload directory. Confirm that outbound mail works if guest email notifications are expected.
 
-Keep uploads private. Do not create a symlink from `public/storage` to this directory or add a public Nginx/Apache alias. Example Nginx locations for existing public storage assets should deny scripts and legacy public upload URLs:
+## Post-deploy verification
 
-```nginx
-client_max_body_size 120m;
+1. Confirm the homepage, login, and health check respond over HTTPS.
+2. Sign in with one account per role and verify role-restricted pages.
+3. Submit a test guest facility request and confirm the code/last-name tracking path.
+4. Submit and update a maintenance ticket; verify its `RM-…` tracker lookup.
+5. Test a request approval in a controlled environment and confirm the reservation is created only when facilities are available.
+6. Verify private receipt downloads are available only through the authorized application flow.
+7. Run `php artisan test` in a separate test environment, not against production data.
 
-location ^~ /storage/payment_attachments/ {
-    deny all;
-}
+## Legacy clients
 
-location ^~ /storage/attachments/ {
-    deny all;
-}
+Older desktop launcher, Electron, and Android documentation is retained under `legacy/` and `android/`. Treat those clients as optional legacy material and verify their compatibility and authentication path separately before distributing them.
 
-location ~* ^/storage/.*\.(php[0-9]?|phtml|phar)(/|$) {
-    return 404;
-}
-
-location /storage/ {
-    try_files $uri =404;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Cache-Control "public, max-age=3600" always;
-}
-```
-
-Place these directives in the site's `server` block before deployment, then test and reload Nginx. For Apache, the project's `public/.htaccess` denies script-like files and direct access to legacy `/storage/payment_attachments/` and `/storage/attachments/` URLs; ensure rewrite rules are enabled and `AllowOverride FileInfo` is permitted. New private uploads are not affected by public storage caching rules.
-
-If upgrading an installation that already has receipts in `storage/app/public/payment_attachments`, keep the legacy files readable by the application until they have been backed up and moved to the configured private directory. The application can serve those legacy paths through the authorized download route; the web-server deny rule above prevents direct public access.
-
-Back up the configured uploads directory along with the database. For example, use a secured backup target with appropriate retention:
-
-```bash
-sudo tar -czf /path/to/secure-backups/fms-payment-receipts-$(date +%F).tar.gz \
-    -C /var/lib/ua-fms/payment-receipts .
-```
-
-Monitor both free partition space and upload-directory growth:
-
-```bash
-df -h /var/lib/ua-fms/payment-receipts
-sudo du -sh /var/lib/ua-fms/payment-receipts
-```
-
-To review old unreferenced receipt and attachment files before cleanup, run:
-
-```bash
-php artisan payment-receipts:clean-orphans --days=30 --dry-run
-```
-
-After confirming the report and ensuring backups are current, omit `--dry-run` to delete unreferenced files older than the chosen grace period. The command never removes a receipt or attachment referenced by a form submission.
-
-## Changing configuration without code changes
-
-### Update login URL
-
-```env
-FMS_LOGIN_URL=https://new-domain.edu.ph/fms-portal-entry
-```
-
-Update `APP_URL` to match. If you are using legacy launchers, rebuild them after changing this value.
-
-### Rotate tokens
-
-1. Update all `FMS_*` secrets in production `.env`.
-2. If you are using legacy launchers, rebuild them with the new values.
-3. Distribute new `.exe` files only if needed; older builds keep old baked-in values.
-4. Clear Laravel config cache: `php artisan config:clear && php artisan config:cache`
-
-### Mobile / external WebView clients
-
-If you maintain a separate Android or iOS wrapper, point it at:
-
-```
-{FMS_LOGIN_URL}?access_token={FMS_ACCESS_TOKEN}&role=org_staff
-```
-
-Use `admin` or `college_staff` for other roles. Rebuild the mobile app when URL or token changes.
-
-## Security best practices
-
-1. Replace all default tokens before go-live.
-2. Use HTTPS for `APP_URL` and `FMS_LOGIN_URL`.
-3. Distribute each role’s launcher only to authorized staff.
-4. Rotate secrets on a schedule (e.g. quarterly); rebuild launchers after rotation.
-5. Prefer long random strings (32+ characters) for `FMS_ACCESS_TOKEN`.
-
-## Multi-environment support
-
-### Development (local machine)
-
-```bash
-php artisan serve --host=127.0.0.1 --port=8000
-```
-
-For legacy launcher testing only, see `legacy/LAUNCHER_README.md`.
-
-### LAN testing
-
-1. Set in `.env`:
-
-```env
-APP_URL=http://192.168.0.10:8000
-FMS_LOGIN_URL=http://192.168.0.10:8000/fms-portal-entry
-```
-
-2. Serve on the LAN IP:
-
-```bash
-php artisan serve --host=192.168.0.10 --port=8000
-```
-
-3. On client PCs, set `FMS_LOGIN_URL` and `FMS_ACCESS_TOKEN` before running legacy launchers, or rebuild launchers with those values.
-
-### Production
-
-Deploy Laravel with production `.env`. If you are still supporting legacy desktop launchers, build them with production `FMS_*` variables, test one full login per role, then distribute binaries.
-
-## Troubleshooting
-
-### Legacy launchers
-
-```powershell
-# PowerShell
-$env:FMS_ACCESS_TOKEN
-$env:FMS_LOGIN_URL
-$env:FMS_ADMIN_SECRET
-```
-
-```cmd
-REM Command Prompt
-echo %FMS_ACCESS_TOKEN%
-echo %FMS_LOGIN_URL%
-```
-
-### Laravel
-
-```bash
-php artisan tinker
->>> env('FMS_ACCESS_TOKEN');
->>> env('FMS_LOGIN_URL');
-```
-
-### Connection issues
-
-- Portal URL in `.env` must match the client entry point. For legacy launchers, this includes `access_token` and `role` query params built by the launcher.
-- For LAN, allow the host firewall to accept port 8000 (or your production port).
-- After `.env` edits on production, refresh config cache.
-
-## Quick deployment checklist
-
-### Development
-
-- [ ] Copy `.env.example` to `.env`
-- [ ] `php artisan key:generate`
-- [ ] `php artisan migrate` and optional `php artisan db:seed` (facilities only; see `TEST_ACCOUNTS.md` for dev users)
-- [ ] `php artisan serve`
-- [ ] (Optional) Run legacy launcher clients only if you are maintaining the older desktop flow
-
-### Production
-
-- [ ] Set strong `FMS_*` values and `APP_DEBUG=false`
-- [ ] Set `FMS_LOGIN_URL` and `APP_URL` to HTTPS production host
-- [ ] Deploy Laravel (`migrate`, config/route/view cache)
-- [ ] Build legacy launchers (PyInstaller) with production env vars, if still required
-- [ ] Test login flow for admin, college_staff, and org_staff
-- [ ] Distribute role-specific `.exe` files to authorized users only when using legacy launchers
-- [ ] Document token rotation and support contacts
-
----
-
-**Result:** Deploy by updating `.env` and caching Laravel config—no application code edits required for environment moves. Legacy launchers may be rebuilt only if still in use.
-
-## Additional resources
-
-- `legacy/LAUNCHER_README.md` — legacy launcher setup, build, and distribution
-- `QUICKSTART.md` — local development in minutes
-- `.env.example` — variable reference
-- `dump/build_launchers.bat` — PyInstaller build helper
-- `TEST_ACCOUNTS.md` — development test users (seeder vs `/make-*` routes)
+See [QUICKSTART.md](QUICKSTART.md) for local development and [TEST_ACCOUNTS.md](TEST_ACCOUNTS.md) for safe development test data.

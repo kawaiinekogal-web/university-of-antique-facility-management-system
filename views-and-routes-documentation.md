@@ -1,5 +1,7 @@
 # Views & Routes Documentation — UA Facility Management System
 
+**Validated:** October 26, 2026. The route tables describe the current web routes; verify `routes/web.php` or run `php artisan route:list` for the authoritative live list. Retired guest portal templates may remain in the repository, but the current guest workflow is public and does not use guest sign-in.
+
 ---
 
 ## Table of Contents
@@ -11,8 +13,9 @@
 5. [Admin Views](#admin-views)
 6. [College Staff Views](#college-staff-views)
 7. [Organization Staff Views](#organization-staff-views)
-8. [GSU PDF Form Views](#gsu-pdf-form-views)
-9. [Notification Views](#notification-views)
+8. [Repair and Maintenance Views](#repair-and-maintenance-views)
+9. [GSU PDF Form Views](#gsu-pdf-form-views)
+10. [Notification Views](#notification-views)
 
 ---
 
@@ -20,7 +23,7 @@
 
 **File:** `routes/web.php`
 
-All routes are defined in the web route file and use session-based authentication with role middleware.
+Routes are defined in `routes/web.php`. Staff routes use session authentication and role middleware; public routes are listed separately.
 
 ### Public Routes (No Authentication)
 
@@ -28,11 +31,16 @@ All routes are defined in the web route file and use session-based authenticatio
 |---|---|---|---|---|
 | GET | `/` | `home` | `PublicCalendarController@index` | Public facility schedule calendar (homepage) |
 | GET | `/track/ticket` | `ticket.lookup` | `TicketLookupController@show` | Rate-limited public status lookup for FM, BK/BKG and RM records; requires tracking code and submitter last name |
+| GET | `/request-facility` | `public.request.create` | `PublicFacilityRequestController@create` | Public guest facility request form; no sign-in |
+| POST | `/request-facility` | `public.request.store` | `PublicFacilityRequestController@store` | Validates and stores a guest request with a separately entered tracking last name; rate-limited |
+| GET | `/request-facility/submitted/{submission}` | `public.request.submitted` | `PublicFacilityRequestController@submitted` | Shows the confirmation only to the visitor session that submitted the request |
+| GET | `/forms/facilities/{submission}/payment-receipt` | `payment-receipts.show` | `PaymentReceiptController@show` | Authorized receipt download for the submitting public session or authorized account |
+| GET | `/forms/facilities/{submission}/attachments/{index}` | `payment-attachments.show` | `PaymentReceiptController@attachment` | Authorized download of a supporting attachment |
 | POST | `/track/ticket/{submission}/payment` | `ticket.payment.upload` | `TicketLookupController@uploadPayment` | Signed, rate-limited receipt upload for an approved guest facility request |
 | GET | `/guest/forms/facilities/{submission}/pdf` | `guest.forms.facilities.pdf` | `Guest\FacilitiesFormPdfController@generate` | Signed PDF download for an approved guest facility request |
 | GET | `/login` | `login` | `AuthController@showLogin` | Show login form |
 | POST | `/login` | `login.post` | `AuthController@login` | Process login |
-| POST | `/logout` | `logout` | `AuthController@logout` | Logout user |
+| GET, POST | `/logout` | `logout` | `AuthController@logout` | Logout user |
 | GET | `/healthz` | — | Closure | JSON health check endpoint |
 
 ### Authenticated Routes (All Roles)
@@ -41,6 +49,30 @@ All routes are defined in the web route file and use session-based authenticatio
 |---|---|---|---|---|
 | GET | `/notifications` | `notifications.index` | `NotificationController@index` | View all notifications |
 | POST | `/notifications/{notification}/read` | `notifications.read` | `NotificationController@markAsRead` | Mark a notification as read |
+
+### Repair and maintenance ticket routes
+
+Staff ticket routes are protected by `auth` and the corresponding role middleware. Public status lookup uses `GET /track/ticket?type=RM&code=...&last_name=...` and does not require sign-in.
+
+| Method | URI | Route name | Access and behavior |
+|---|---|---|---|
+| GET | `/admin/maintenance-tickets` | `admin.maintenance-tickets.index` | Admin queue, active and completed tickets |
+| GET | `/admin/maintenance-tickets/{ticket}` | `admin.maintenance-tickets.show` | Admin ticket detail |
+| PUT | `/admin/maintenance-tickets/{ticket}` | `admin.maintenance-tickets.update` | Update status and remarks |
+| GET | `/admin/maintenance-tickets/{ticket}/messages` | `admin.maintenance-tickets.messages` | Fetch college-ticket conversation updates |
+| POST | `/admin/maintenance-tickets/{ticket}/messages` | `admin.maintenance-tickets.messages.store` | Send an admin reply; throttled |
+| GET | `/college/maintenance-requests` | `college.maintenance-tickets.index` | List tickets filed by the college team |
+| GET | `/college/maintenance-requests/create` | `college.maintenance-tickets.create` | New college repair request form |
+| POST | `/college/maintenance-requests` | `college.maintenance-tickets.store` | Submit a ticket; requires account tracking last name |
+| GET | `/college/maintenance-requests/{ticket}` | `college.maintenance-tickets.show` | View a ticket from the user's college team |
+| GET | `/college/maintenance-requests/{ticket}/messages` | `college.maintenance-tickets.messages` | Fetch conversation updates |
+| POST | `/college/maintenance-requests/{ticket}/messages` | `college.maintenance-tickets.messages.store` | Send a message; throttled |
+| GET | `/org/maintenance-requests` | `org.maintenance-tickets.index` | List tickets submitted by the signed-in organization user |
+| GET | `/org/maintenance-requests/create` | `org.maintenance-tickets.create` | New organization repair request form |
+| POST | `/org/maintenance-requests` | `org.maintenance-tickets.store` | Submit a ticket; requires account tracking last name |
+| GET | `/org/maintenance-requests/{ticket}` | `org.maintenance-tickets.show` | View the signed-in user's ticket |
+
+College tickets are shared within the college and have a conversation with GSU. Organization tickets are requester-scoped and do not use the college conversation routes.
 
 ### Admin Routes (`auth` + `role:admin`)
 
@@ -70,11 +102,12 @@ All routes are defined in the web route file and use session-based authenticatio
 #### Form Submission Review
 | Method | URI | Route Name | Controller | Description |
 |---|---|---|---|---|
-| GET | `/admin/forms/facilities` | `admin.forms.facilities.index` | `Admin\FormSubmissionController@index` | List all  Approve Requests |
+| GET | `/admin/forms/facilities` | `admin.forms.facilities.index` | `Admin\FormSubmissionController@index` | List facility utilization requests for review |
 | GET | `/admin/forms/facilities/{submission}` | `admin.forms.facilities.show` | `Admin\FormSubmissionController@show` | View a single request |
 | POST | `/admin/forms/facilities/{submission}/approve` | `admin.forms.facilities.approve` | `Admin\FormSubmissionController@approve` | Approve request |
 | POST | `/admin/forms/facilities/{submission}/disapprove` | `admin.forms.facilities.disapprove` | `Admin\FormSubmissionController@disapprove` | Disapprove request |
-| POST | `/admin/forms/facilities/{submission}/set-booking` | `admin.forms.facilities.set-booking` | `Admin\FormSubmissionController@setBooking` | Convert approved request to booking |
+| POST | `/admin/forms/facilities/{submission}/verify-payment` | `admin.forms.facilities.verify-payment` | `Admin\FormSubmissionController@verifyPayment` | Mark an uploaded guest receipt as verified |
+| POST | `/admin/forms/facilities/{submission}/set-reservation` | `admin.forms.facilities.set-reservation` | `Admin\FormSubmissionController@setReservation` | Create a reservation after approval and required payment verification |
 | GET | `/admin/forms/facilities/{submission}/pdf` | `admin.forms.facilities.pdf` | `Admin\FacilitiesFormPdfController@generate` | Generate PDF for approved request |
 
 #### User Management
@@ -83,13 +116,18 @@ All routes are defined in the web route file and use session-based authenticatio
 | GET | `/admin/users` | `admin.users.index` | `Admin\UserController@index` | List all users |
 | GET | `/admin/users/create` | `admin.users.create` | `Admin\UserController@create` | Show create user form |
 | POST | `/admin/users` | `admin.users.store` | `Admin\UserController@store` | Store new user |
+| GET | `/admin/users/{user}/edit` | `admin.users.edit` | `Admin\UserController@edit` | Edit an account |
+| PUT | `/admin/users/{user}` | `admin.users.update` | `Admin\UserController@update` | Update an account |
+| PATCH | `/admin/users/{user}/deactivate` | `admin.users.deactivate` | `Admin\UserController@deactivate` | Deactivate an account while preserving its history |
+| GET | `/admin/monthly-records` | `admin.monthly-records.index` | `Admin\MonthlyRecordsController@index` | View monthly utilization records |
+| GET | `/admin/monthly-records/export` | `admin.monthly-records.export` | `Admin\MonthlyRecordsController@exportCharts` | Export monthly chart data |
 
 #### Booking / Reservation Management
 | Method | URI | Route Name | Controller | Description |
 |---|---|---|---|---|
 | GET | `/admin/bookings` | `admin.bookings.index` | `Admin\BookingController@index` | List all reservations (reserved / rescheduled / cancelled / completed) |
 | GET | `/admin/bookings/{booking}/edit` | `admin.bookings.edit` | `Admin\BookingController@edit` | View/edit booking |
-| POST | `/admin/bookings/{booking}` | `admin.bookings.update` | `Admin\BookingController@update` | Update booking (reschedule) |
+| PUT | `/admin/bookings/{booking}` | `admin.bookings.update` | `Admin\BookingController@update` | Update booking (reschedule) |
 | POST | `/admin/bookings/{booking}/cancel` | `admin.bookings.cancel` | `Admin\BookingController@cancel` | Cancel booking |
 | GET | `/admin/calendar` | `admin.calendar` | `Admin\BookingController@calendar` | Monthly reservation calendar (reserved / rescheduled) |
 | GET | `/admin/overview` | `admin.overview` | `Admin\BookingController@overview` | Monthly reservations per facility (bar graph) |
@@ -115,15 +153,17 @@ All routes are defined in the web route file and use session-based authenticatio
 #### Bookings
 | Method | URI | Route Name | Controller | Description |
 |---|---|---|---|---|
-| GET | `/college/bookings` | `college.bookings.index` | `College\BookingController@index` | List own reservations with filters |
+| GET | `/college/bookings` | `college.bookings.index` | `College\BookingController@index` | List the user's reservations with filters |
+| GET | `/college/calendar` | `college.calendar` | `College\BookingController@calendar` | View the college reservation calendar |
 
-#### Facilities  Approve Requests
+#### Facility Utilization Requests
 | Method | URI | Route Name | Controller | Description |
 |---|---|---|---|---|
-| GET | `/college/requests` | `college.requests.index` | `College\FormController@indexFacilities` | List own  Approve Requests |
+| GET | `/college/requests` | `college.requests.index` | `College\FormController@indexFacilities` | List the user's facility utilization requests |
 | GET | `/college/requests/facilities` | `college.requests.facilities.create` | `College\FormController@createFacilities` | Show new request form |
 | POST | `/college/requests/facilities` | `college.requests.facilities.store` | `College\FormController@storeFacilities` | Submit new request |
 | GET | `/college/requests/facilities/{submission}` | `college.requests.facilities.show` | `College\FormController@showFacilities` | View a single request |
+| POST | `/college/requests/facilities/{submission}/cancel` | `college.requests.facilities.cancel` | `College\FormController@cancelFacilities` | Cancel an eligible request |
 
 ### Organization Staff Routes (`auth` + `role:org_staff`)
 
@@ -131,9 +171,18 @@ All routes are defined in the web route file and use session-based authenticatio
 |---|---|---|---|---|
 | GET | `/org/dashboard` | `org.dashboard` | `Org\DashboardController@index` | Organization staff dashboard |
 | GET | `/org/bookings` | `org.bookings.index` | `Org\BookingController@index` | List own reservations with filters |
+| GET | `/org/calendar` | `org.bookings.calendar` | `Org\BookingController@calendar` | View the organization reservation calendar |
+| GET | `/org/maintenance-requests` | `org.maintenance-tickets.index` | `Org\MaintenanceTicketController@index` | List the signed-in user's maintenance tickets |
+| GET | `/org/maintenance-requests/create` | `org.maintenance-tickets.create` | `Org\MaintenanceTicketController@create` | Show the maintenance request form |
+| POST | `/org/maintenance-requests` | `org.maintenance-tickets.store` | `Org\MaintenanceTicketController@store` | Submit a maintenance ticket |
+| GET | `/org/maintenance-requests/{ticket}` | `org.maintenance-tickets.show` | `Org\MaintenanceTicketController@show` | View the requester's maintenance ticket |
 | GET | `/org/requests/facilities` | `org.requests.facilities.create` | `Org\FormController@createFacilities` | Show new request form |
 | POST | `/org/requests/facilities` | `org.requests.facilities.store` | `Org\FormController@storeFacilities` | Submit new request |
-| GET | `/org/requests/facilities/index` | `org.requests.facilities.index` | `Org\FormController@indexFacilities` | List own  Approve Requests |
+| GET | `/org/requests/facilities/index` | `org.requests.facilities.index` | `Org\FormController@indexFacilities` | List the user's facility utilization requests |
+| GET | `/org/requests/facilities/{submission}` | `org.requests.facilities.show` | `Org\FormController@showFacilities` | View a single request |
+| POST | `/org/requests/facilities/{submission}/cancel` | `org.requests.facilities.cancel` | `Org\FormController@cancelFacilities` | Cancel an eligible request |
+
+College and organization staff also have role-scoped team user routes at `/college/users...` and `/org/users...`, including create, edit, update, and deactivate actions. Deactivation preserves account history.
 
 ### GSU High-priority Direct Booking Routes (Admin)
 
@@ -142,15 +191,9 @@ All routes are defined in the web route file and use session-based authenticatio
 | GET | `/admin/bookings/create-direct` | `admin.bookings.create-direct` | `Admin\BookingController@createDirect` | Show direct booking form (GSU override) |
 | POST | `/admin/bookings/store-direct` | `admin.bookings.store-direct` | `Admin\BookingController@storeDirect` | Persist direct booking |
 
-### Development/Testing Routes (Temporary)
+### Development account creation
 
-| Method | URI | Description |
-|---|---|---|
-| GET | `/make-admin` | Create/update admin test user (`admin@example.com`) |
-
-| GET | `/make-college-staff` | Create/update college staff test user (`college@example.com`) |
-| GET | `/make-org-staff` | Create/update org staff test user (`org@example.com`) |
-| GET | `/make-user` | Create/update viewer test user (`user@example.com`) |
+There are no `/make-*` account-creation routes in the current `routes/web.php`. Create local sample accounts with the database seeders; do not expect the retired helper URLs to work.
 
 ---
 
@@ -188,7 +231,7 @@ Extends `layouts.app`. Provides the admin portal shell with sidebar navigation.
 |---|---|
 | Overview | Dashboard |
 | Facilities | All facilities, Add facility |
-| Requests |  Approve Requests, Bookings, Booking calendar, Monthly overview |
+| Requests | Facility utilization requests, Bookings, Booking calendar, Monthly records |
 | Administration | Users, Create user |
 
 **Content Section:** `@yield('admin-content')`
@@ -264,7 +307,7 @@ The public landing page and reservation calendar. It includes a no-sign-in track
 
 **Features:**
 - Public tracker accepts Facility (FM), Booking (BK; code prefix `BKG-`), or Maintenance (RM).
-- Requires the tracking code and the last name of the person who submitted the record. Code and surname must both match; a mismatch does not reveal whether the record exists.
+- Requires the tracking code and the submitter's tracking last name. New accounts and guest facility requests store this value separately; the application does not infer it from the full name. Explicit values are compared as whole values after case/spacing normalization (commas and periods are treated as spaces); records without one retain legacy matching. A mismatch does not reveal whether the record exists.
 - Shows status and relevant request/schedule details without exposing requester identity. Lookup results are read-only for internal records.
 - Approved guest facility requests may show temporary signed PDF and payment-receipt actions when applicable; receipt upload is handled by the signed `ticket.payment.upload` route.
 - Rate-limited JSON lookup: `GET /track/ticket` (`ticket.lookup`, 20 requests/minute).
@@ -272,7 +315,7 @@ The public landing page and reservation calendar. It includes a no-sign-in track
 - Month navigation (Prev / Next links)
 - 7-column calendar grid (Mon–Sun) displaying bookings per day
 - Each booking card shows: facility name, time range, purpose (truncated to 60 chars)
-- Only approved and rescheduled bookings are shown
+- Only `reserved` and `rescheduled` bookings are shown
 - Displays unavailable/maintenance facilities and selected-day booking details.
 - Calendar data: `$currentMonth` (Carbon), `$days` (array keyed by date string → bookings), `$unavailableFacilities`, `$selectedDate`, and `$selectedDateBookings`.
 
@@ -308,14 +351,14 @@ Admin welcome dashboard with quick-access card links.
 | Card | Links To | Description |
 |---|---|---|
 | Facilities | `admin.facilities.index` | Manage campus facilities and equipment |
-|  Approve Requests | `admin.forms.facilities.index` | Review and approve facility utilization submissions |
+| Facility utilization requests | `admin.forms.facilities.index` | Review and approve facility utilization submissions |
 | Bookings | `admin.bookings.index` | View and adjust confirmed bookings |
 | User management | `admin.users.index` | Create and manage portal accounts |
 
 **GSU Forms Cards:**
 | Card | Links To | Description |
 |---|---|---|
-| Facilities & utilization form | `forms.facilities.show` | Generate PDF for facility  Approve Requests |
+| Facilities & utilization form | `forms.facilities.show` | Fill and download the official facilities form |
 | Repair & maintenance form | `forms.repair.show` | Generate PDF for repair and maintenance requests |
 
 ---
@@ -407,7 +450,7 @@ Detailed view and edit form for a single booking.
 | Equipment quantities | number inputs | Monobloc Chair, Table, Electric Fan, Rostrum, Flag, Sound, LED Wall |
 
 **Actions:**
-- Reschedule (submit form) → POST `admin.bookings.update`
+- Reschedule (submit form) → PUT `admin.bookings.update`
 - Cancel booking → POST `admin.bookings.cancel`
 
 ---
@@ -417,7 +460,7 @@ Detailed view and edit form for a single booking.
 **Route:** `GET /admin/calendar` → `admin.calendar`
 **Layout:** `layouts.admin`
 
-Full monthly calendar view of all approved bookings.
+Full monthly calendar view of all `reserved` and `rescheduled` bookings.
 
 **Features:**
 - Month navigation (Prev / Next)
@@ -437,7 +480,7 @@ Monthly booking analytics chart.
 **Features:**
 - Month navigation (Prev / Next)
 - Canvas-based line chart (drawn with vanilla JS, no chart library)
-- Shows bookings per day for approved and rescheduled bookings
+- Shows bookings per day for `reserved`, `rescheduled`, and `completed` bookings
 - X-axis: day numbers, Y-axis: booking count
 - Blue line with dot markers
 
@@ -448,9 +491,9 @@ Monthly booking analytics chart.
 **Route:** `GET /admin/forms/facilities` → `admin.forms.facilities.index`
 **Layout:** `layouts.admin`
 
-Paginated table of all facilities  Approve Requests (from college and org staff).
+Paginated table of facility utilization requests from staff and public guests.
 
-**Table Columns:** ID, Requester (name), Unit, Status (color-coded badge: yellow=pending, green=approved, red=disapproved), Submitted (date), Actions ("View" link)
+**Table Columns:** Request code, Requester, Unit, Status, Submitted date, Actions ("View" link). Requests are grouped in decision order; payment state is tracked separately from the request status.
 
 ---
 
@@ -466,8 +509,9 @@ Detailed view of a single utilization request with action buttons.
 **Actions (conditional):**
 | Condition | Actions |
 |---|---|
-| Status = `pending` | Approve button, Disapprove button |
-| Status = `approved` | Generate PDF button, "Convert to Booking" button |
+| Eligible pending request | Approve button, Disapprove button |
+| Approved or reserved request | Generate PDF when available |
+| Guest request with applicable payment state | View receipt or verify an uploaded receipt |
 
 ---
 
@@ -476,7 +520,7 @@ Detailed view of a single utilization request with action buttons.
 **Route:** — (legacy/alternate form submissions review page)
 **Layout:** `layouts.app`
 
-Tabbed view of form submissions organized by status (Pending, Approved, Converted, Disapproved). Uses Bootstrap-style tabs and includes `admin.forms._table` partial for each tab.
+Legacy, unrouted form review view retained in the repository. The current review workflow uses `admin/forms/facilities_index.blade.php` and `admin/forms/facilities_show.blade.php`.
 
 ---
 
@@ -494,7 +538,7 @@ Detailed view of a form submission with Bootstrap card styling. Shows all payloa
 
 Reusable partial for rendering a table of form submissions. Used by `admin/forms/index.blade.php`.
 
-**Table Columns:** ID, Requester (name + type + unit), Type, Date Activity, Facility (resolved from `facility_id`), Actions ("View" link)
+**Table Columns:** Legacy only; this partial is not used by the current routed review workflow.
 
 ---
 
@@ -503,9 +547,9 @@ Reusable partial for rendering a table of form submissions. Used by `admin/forms
 **Route:** `GET /admin/users` → `admin.users.index`
 **Layout:** `layouts.admin`
 
-Paginated table of all system users.
+Paginated table of system users with account status and role actions.
 
-**Table Columns:** Name, Email, Role (color-coded badge: purple=admin, blue=college_staff, green=org_staff, gray=viewer), Unit (college or organization name), Created date
+**Table Columns:** Name, email, role, unit, contact details, active state, and account actions. Accounts are deactivated instead of deleted so their history is preserved.
 
 ---
 
@@ -546,7 +590,7 @@ College staff welcome dashboard with quick-access cards.
 | Card | Links To | Description |
 |---|---|---|
 | My facilities | `college.facilities.index` | View and manage facilities owned by your college |
-| Bookings | `college.bookings.index` | Review booking requests for your facilities |
+| Reservations | `college.bookings.index` | View the signed-in user's reservations |
 | Utilization request | `college.requests.facilities.create` | Submit a facilities utilization request to GSU |
 
 ---
@@ -642,7 +686,7 @@ Form to submit a facilities utilization request to GSU.
 **Route:** `GET /college/requests` → `college.requests.index`
 **Layout:** `layouts.college`
 
-Paginated table of the college staff's own  Approve Requests.
+Paginated table of the college staff user's own facility utilization requests, including reserved requests.
 
 **Table Columns:** Date Requested, Activity Date, Time, Purpose (truncated 50 chars), Status (badge), Actions ("View" link)
 
@@ -666,7 +710,7 @@ Read-only detail view of a single utilization request.
 
 Older version of the facility utilization form using Bootstrap card/form styling. Includes facility dropdown, "Other" facility text field, equipment quantity inputs, and JavaScript for show/hide logic.
 
-**Submits to:** POST `college.forms.store`
+**Submits to:** POST `college.requests.facilities.store`
 
 ---
 
@@ -720,11 +764,26 @@ Read-only monthly calendar showing bookings requested by the organization.
 **Route:** `GET /org/requests/facilities/index` → `org.requests.facilities.index`
 **Layout:** `layouts.org`
 
-Paginated table of the org staff's own  Approve Requests. Same structure as the college version.
+Paginated table of the organization staff user's own facility utilization requests, including reserved requests.
 
 **Table Columns:** Date Requested, Activity Date, Time, Purpose, Status (badge), Actions ("View" link)
 
 ---
+
+## Repair and Maintenance Views
+
+| View | Purpose |
+|---|---|
+| `admin/maintenance-tickets/index.blade.php` | Admin queue grouped into active and completed tickets |
+| `admin/maintenance-tickets/show.blade.php` | Ticket details, status/remarks update form, and college conversation when applicable |
+| `college/maintenance-tickets/index.blade.php` | Tickets submitted across the signed-in user's college team |
+| `college/maintenance-tickets/create.blade.php` | New repair ticket form, including an unlisted “Others” location |
+| `college/maintenance-tickets/show.blade.php` | Ticket detail, progress, and live college-to-GSU conversation |
+| `org/maintenance-tickets/index.blade.php` | Tickets submitted by the signed-in organization user |
+| `org/maintenance-tickets/create.blade.php` | New organization repair ticket form |
+| `org/maintenance-tickets/show.blade.php` | Requester-scoped organization ticket detail |
+
+New tickets require the account's explicit tracking last name for public status lookup. Ticket codes use the `RM-…` format; organization tickets do not have the college conversation feature.
 
 ## GSU PDF Form Views
 

@@ -1,123 +1,58 @@
-# Running UA-FMS with Laragon
+# Local Setup with Laragon
 
-## Quick Start
+This guide runs the Laravel web application on Windows using Laragon's PHP and MySQL services.
 
-### 1. Start Laragon Services
-Open Laragon and click **Start All** to start Apache, MySQL, and PHP.
+## 1. Start services and install dependencies
 
-### 2. Install Dependencies (First Time Only)
-```bash
-cd C:\laragon\www\university-of-antique-facility-management-system
+Start MySQL from Laragon, then open a terminal in the repository:
+
+```powershell
 composer install
 npm install
 ```
 
-### 3. Database Setup (First Time Only)
-```bash
-# Create database
-php artisan db:create facility_management
+## 2. Configure the environment and database
 
-# Or manually in Laragon's phpMyAdmin (http://localhost/phpmyadmin)
-# Create database: facility_management
-# User: root (no password by default)
+Copy `.env.example` to `.env` using File Explorer or:
+
+```powershell
+copy .env.example .env
 ```
 
-### 4. Configure Environment
-Copy `.env.example` to `.env` if not already done:
-```bash
-cp .env.example .env
-```
+Create an empty database in phpMyAdmin or the MySQL client. Set the matching connection values in `.env`:
 
-Update these lines in `.env`:
-```
+```env
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=facility_management
-DB_USERNAME=root
-DB_PASSWORD=
+DB_USERNAME=your_local_mysql_user
+DB_PASSWORD=your_local_mysql_password
 ```
 
-Generate application key:
-```bash
+Generate the Laravel key, apply migrations, and seed development data:
+
+```powershell
 php artisan key:generate
-```
-
-### 5. Run Migrations & Seeders
-```bash
-# Run all migrations including the new signatory fix
 php artisan migrate
-
-# Seed the database with initial data
 php artisan db:seed
-```
-
-### 6. Build Assets
-```bash
 npm run build
 ```
 
-### 7. Start Development Server
-```bash
-php artisan serve
+## 3. Run the application
+
+```powershell
+php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-Or use the full dev environment:
-```bash
-composer dev
-```
+Visit `http://127.0.0.1:8000`. Use only development/sample accounts in this local environment; see [TEST_ACCOUNTS.md](TEST_ACCOUNTS.md).
 
-### 8. Access the Application
-Open your browser and go to:
-- **Local**: http://localhost:8000
-- **Laragon URL**: http://university-of-antique-facility-management-system.test (if configured)
+## Useful commands
 
-## Default Test Accounts
-
-After seeding, you can log in with:
-
-**Admin:**
-- Email: `adminA@example.com`
-- Password: `password123`
-
-**College Staff:**
-- CCIS: `college@ccis.com` / `password123`
-- CEA: `college@cea.com` / `password123`
-- CMG: `college@cmg` / `password123`
-
-**Org Staff:**
-- Email: `orgA@example.com`
-- Password: `password123`
-
-## Common Commands
-
-```bash
-# View logs
-php artisan pail
-
-# Run tests
+```powershell
 php artisan test
-
-# Clear caches
+php artisan route:list
 php artisan optimize:clear
-
-# Run specific migration
-php artisan migrate --path=database/migrations/2026_10_24_000001_fix_signatory_dean_names.php
 ```
 
-## Troubleshooting
-
-**Port 8000 already in use:**
-```bash
-php artisan serve --port=8001
-```
-
-**Database connection failed:**
-- Ensure MySQL is running in Laragon
-- Check credentials in `.env` match Laragon's MySQL setup
-- Default Laragon MySQL: root user, no password
-
-**Composer/NPM errors:**
-- Clear cache: `composer clear-cache`
-- Delete `vendor` and run `composer install` again
-- Delete `node_modules` and run `npm install` again
+For private receipt storage and production web-server configuration, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md). Avoid using default database passwords or seeded credentials on a shared or production host.
