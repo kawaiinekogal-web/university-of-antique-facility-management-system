@@ -193,6 +193,7 @@
 │  │  │                                                     │   │  │
 │  │  │  AuthController           →  Login/logout            │   │  │
 │  │  │  PublicCalendarController →  Public homepage          │   │  │
+│  │  │  TicketLookupController → Public FM/BK/RM status     │   │  │
 │  │  │  NotificationController   →  User notifications      │   │  │
 │  │  │  GsuFormController        →  PDF form generation      │   │  │
 │  │  │                                                     │   │  │
@@ -346,6 +347,18 @@ College/Org Staff                         Admin (GSU)
       │                                        │
 ```
 
+### Public Status Lookup Flow
+
+The homepage (`GET /`) renders the public calendar and tracker. The tracker calls the rate-limited `GET /track/ticket` endpoint with a record type, tracking code, and submitter last name; authentication is not required.
+
+| Type | Record source | Code | Status/details returned |
+|---|---|---|---|
+| `FM` | Facility utilization `FormSubmission` | `FM-<submission year>-<submission id>` | Status, venue, date/time; a rescheduled booking's updated schedule is used |
+| `BK` | `Booking` | `booking_code` (`BKG-…`) | Status, venue, purpose, date/time |
+| `RM` | `MaintenanceTicket` | `ticket_code` (`RM-…`) | Status, facility, subject, submitted date |
+
+The controller checks the last name against the associated requester name (and, for FM, names stored in the submission payload). It returns status/details without requester identity; an unmatched code and surname produce the same not-found response. This lookup path is read-only. For approved guest FM submissions only, the response can include short-lived signed links to the PDF and, when applicable, receipt-upload action. Receipt upload is a separate signed, rate-limited POST endpoint.
+
 ### Deployment Architecture
 
 ```
@@ -407,7 +420,7 @@ Capstone-Univerity-Of-Antique-Facility-Management-System/
 │   │   ├── notifications/          ← Notification views (1)
 │   │   ├── auth/                   ← Auth views (1)
 │   │   ├── public/                 ← Public views (1)
-│   │   └── welcome.blade.php      ← Legacy placeholder
+│   │   └── welcome.blade.php      ← Public landing page, calendar, and ticket tracker
 │   ├── css/app.css
 │   └── js/app.js
 │

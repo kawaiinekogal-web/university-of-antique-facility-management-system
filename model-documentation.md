@@ -132,7 +132,7 @@ None defined.
 **Table:** `bookings`
 
 ### Description
-Represents a confirmed facility reservation. Created when an admin converts an approved form submission into a booking, or when an admin creates one directly.
+Represents a facility reservation. Created when an admin converts an approved form submission into a booking, or when an admin creates one directly. The public tracker identifies bookings by the unique `booking_code` and requires the requester's last name before returning status.
 
 ### Schema
 
@@ -151,7 +151,7 @@ Represents a confirmed facility reservation. Created when an admin converts an a
 | `additional_details` | text | nullable | JSON-encoded extra data (equipment quantities, reschedule notes, cancel reasons) |
 | `requested_at` | datetime | nullable | When the original request was submitted |
 | `approved_at` | datetime | nullable | When the booking was approved |
-| `booking_code` | string | unique | Reference number (e.g., `BKG-20260521143000-5`) |
+| `booking_code` | string | unique | Public tracking reference (e.g., `BKG-20260521143000-5`) |
 | `created_at` | timestamp | auto | Record creation time |
 | `updated_at` | timestamp | auto | Record update time |
 
@@ -181,18 +181,21 @@ Represents a confirmed facility reservation. Created when an admin converts an a
 **Table:** `maintenance_tickets`
 
 ### Description
-Represents a repair/maintenance request for a facility. Can optionally be linked to a specific booking. Tracks the ticket lifecycle from submission through approval to completion.
+Represents a repair/maintenance request for a facility. Can optionally be linked to a specific booking. Tracks the maintenance lifecycle and has a public `ticket_code` used by the homepage status tracker; lookup also requires the requester's last name.
 
 ### Schema
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | `id` | bigint (auto) | PK | Primary key |
-| `facility_id` | bigint | FK → `facilities.id`, cascade delete | Facility needing maintenance |
+| `ticket_code` | string | nullable, unique | Public maintenance tracking code (`RM-…`) |
+| `facility_id` | bigint | nullable FK → `facilities.id`, cascade delete | Listed facility needing maintenance; null when the requester enters an unlisted place |
+| `facility_other` | string(160) | nullable | Requester's typed location when no listed facility applies |
 | `requester_id` | bigint | FK → `users.id`, cascade delete | User who filed the ticket |
 | `booking_id` | bigint | FK → `bookings.id`, nullable, null on delete | Related booking (if applicable) |
 | `request_method` | string | required | How submitted: `in-person`, `phone`, `email`, `system` |
-| `status` | string | default `'pending'` | One of: `pending`, `approved`, `rejected`, `in_progress`, `completed` |
+| `subject` | string | nullable | Short maintenance issue title shown in the public tracker |
+| `status` | string | default `'pending'` | Current lifecycle values: `notified`, `pending`, `ongoing`, `success`, `failed` |
 | `issue_description` | text | required | Description of the issue/problem |
 | `admin_remarks` | text | nullable | Admin notes/remarks |
 | `requested_at` | datetime | nullable | When the ticket was submitted |
@@ -202,7 +205,7 @@ Represents a repair/maintenance request for a facility. Can optionally be linked
 | `updated_at` | timestamp | auto | Record update time |
 
 ### Fillable
-`facility_id`, `requester_id`, `booking_id`, `request_method`, `status`, `issue_description`, `admin_remarks`, `requested_at`, `approved_at`, `completed_at`
+`ticket_code`, `facility_id`, `facility_other`, `requester_id`, `booking_id`, `request_method`, `subject`, `status`, `issue_description`, `admin_remarks`, `requested_at`, `approved_at`, `completed_at`
 
 ### Casts
 - `requested_at` → `datetime`
@@ -334,7 +337,7 @@ None (extends base `Model`).
 **Table:** `form_submissions`
 
 ### Description
-Tracks the submission through its lifecycle from pending to approved/disapproved and eventually booked into a booking.
+Tracks a facility utilization submission through its lifecycle from pending to approved/disapproved and reservation. Public FM tracking derives its code from the submission year and ID (`FM-<year>-<id>`); it requires the submitter's last name and does not require a separate tracking-code column.
 
 ### Schema
 
@@ -343,10 +346,12 @@ Tracks the submission through its lifecycle from pending to approved/disapproved
 | `id` | bigint (auto) | PK | Primary key |
 | `type` | string | required | Form type (e.g., `facilities_utilization`, `repair_maintenance`) |
 | `requester_id` | bigint | FK → `users.id`, cascade delete | User who submitted the form |
-| `requester_type` | string | required | Requester role: `college`, `org`, or `admin` |
+| `requester_type` | string | required | Requester type: `college`, `org`, `admin`, or `guest` |
 | `requester_unit` | string | nullable | College name or organization name |
 | `status` | string | default `'pending'` | One of: `pending`, `approved`, `disapproved`, `cancelled`, `booked` |
 | `payload` | json | required | Full form data as JSON (see Payload Structure below) |
+| `payment_attachment` | string | nullable | Private storage path for a guest request's uploaded receipt |
+| `payment_status` | string | default `not_required` | Guest receipt workflow status (for example `pending_payment`, `payment_uploaded`, `payment_verified`, `not_required`) |
 | `created_at` | timestamp | auto | Record creation time |
 | `updated_at` | timestamp | auto | Record update time |
 
@@ -373,6 +378,8 @@ Tracks the submission through its lifecycle from pending to approved/disapproved
   }
 }
 ```
+
+Public guest submissions use `requester_type=guest` and are linked to a shared walk-in account; the visitor's actual name is stored in the payload. The public tracker checks the supplied surname against `requester_name`, `client_name`, and, when applicable, the associated requester's account name. A matching FM lookup returns status and relevant schedule details, not requester identity. Only approved guest facility submissions may receive temporary signed PDF/payment action URLs.
 
 ### Fillable
 `type`, `requester_id`, `requester_type`, `requester_unit`, `status`, `payload`

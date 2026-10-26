@@ -201,3 +201,17 @@
 | `createFacilities()` | GET | `/org/requests/facilities` | Renders the Facilities Utilization request form for org staff. Loads GSU-managed facilities and the user's organization-owned active facilities for selection. |
 | `storeFacilities(Request $request)` | POST | `/org/requests/facilities` | Submits a facilities utilization request. Uses the same 30-day minimum notice, 14-day maximum range, multi-facility selection, and blocking overlap validation as College requests. Builds a JSON payload with `requester_unit` set to the user's `organization_name`. Creates a pending `FormSubmission` with `requester_type=org` and notifies the requester and admins. |
 | `indexFacilities()` | GET | `/org/requests/facilities/index` | Lists the current org staff user's own facilities utilization submissions, paginated (10 per page). |
+
+---
+
+## 19. `TicketLookupController`
+**File:** `app/Http/Controllers/TicketLookupController.php`
+
+Public controller used by the homepage tracker. The status lookup does not require authentication and is limited to 20 requests per minute.
+
+| Method | HTTP | Route | Description |
+|---|---|---|---|
+| `show(Request $request)` | GET | `/track/ticket` (`ticket.lookup`) | Accepts `type` (`FM`, `BK`, or `RM`), `code`, and `last_name`. Looks up a facility utilization submission, booking, or maintenance ticket only when the supplied surname matches the requester's name. Returns status and relevant schedule/request details without requester identity. Missing surnames return `needs_last_name`; unmatched codes or surnames return the same not-found response. |
+| `uploadPayment(Request $request, FormSubmission $submission)` | POST | `/track/ticket/{submission}/payment` (`ticket.payment.upload`) | Signed, rate-limited endpoint for approved guest facility requests only. Validates a JPG/JPEG, PNG, or PDF receipt up to 10 MiB, stores it on the private payment-receipts disk, and changes payment status to `payment_uploaded`. |
+
+For an approved guest facility request, `show` may return a temporary signed PDF URL (30-minute expiry) and, when payment is still due, a temporary signed receipt-upload URL (15-minute expiry). Booking and maintenance lookups return status/details only; none of the status lookup results permit editing the underlying record.

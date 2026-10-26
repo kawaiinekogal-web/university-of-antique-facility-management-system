@@ -4,7 +4,7 @@
 
 The UA Facility Management System is a role-based web application that centralizes facility reservations, utilization requests, and maintenance coordination for the University of Antique. It supports:
 
-- Public users (view‑only reservation calendar).
+- Public users (reservation calendar and no-sign-in request, booking, and maintenance status lookup).
 - GSU admins (full control over facilities, reservations, and users).
 - College staff (manage college facilities and submit reservation requests).
 - Organization staff (submit and track facility utilization requests).
@@ -19,7 +19,9 @@ This document describes the functional behavior of the system from a user and bu
 
 - View the public reservation calendar.
 - See upcoming reservations per facility.
-- No login or modification capabilities.
+- Check a facility request (`FM`), booking (`BKG`), or maintenance ticket (`RM`) status without signing in, using the tracking code and the submitter's last name.
+- View matching status and relevant schedule/request details without exposing the requester's identity. A code or surname mismatch does not disclose the record.
+- Public tracking is read-only for status. Approved guest facility requests may additionally expose temporary signed PDF and payment-receipt actions when applicable.
 
 ### 2.2 Admin (GSU Staff)
 
@@ -212,6 +214,8 @@ This document describes the functional behavior of the system from a user and bu
    - Route: `home` → `PublicCalendarController@index`.
    - Shows all `reserved` + `rescheduled` reservations within the month.
    - Navigation stays on `/` with `?month=YYYY-MM#calendar`.
+   - The homepage also provides a public request tracker for `FM`, `BK` (booking reference `BKG-…`), and `RM` records. Each lookup requires the tracking code and the submitter's last name; login is not required.
+   - Lookup results return status and relevant record details only. FM requests may include temporary signed PDF and receipt-upload links for approved guest requests; these actions do not grant access to internal record editing.
 
 2. **Admin reservation calendar (`/admin/calendar`):**
    - Same visual calendar partial, but route name is `admin.calendar`.
@@ -261,7 +265,7 @@ This document describes the functional behavior of the system from a user and bu
 - College and org users can only:
   - View and modify their own requests and reservations.
   - College facility edits are constrained to the user's college.
-- Public users have no write access.
+- Public users have no access to staff editing or management capabilities. The homepage tracker is read-only for status; an approved guest facility request may expose only its applicable signed PDF and payment-receipt actions.
 
 ---
 

@@ -27,6 +27,9 @@ All routes are defined in the web route file and use session-based authenticatio
 | Method | URI | Route Name | Controller | Description |
 |---|---|---|---|---|
 | GET | `/` | `home` | `PublicCalendarController@index` | Public facility schedule calendar (homepage) |
+| GET | `/track/ticket` | `ticket.lookup` | `TicketLookupController@show` | Rate-limited public status lookup for FM, BK/BKG and RM records; requires tracking code and submitter last name |
+| POST | `/track/ticket/{submission}/payment` | `ticket.payment.upload` | `TicketLookupController@uploadPayment` | Signed, rate-limited receipt upload for an approved guest facility request |
+| GET | `/guest/forms/facilities/{submission}/pdf` | `guest.forms.facilities.pdf` | `Guest\FacilitiesFormPdfController@generate` | Signed PDF download for an approved guest facility request |
 | GET | `/login` | `login` | `AuthController@showLogin` | Show login form |
 | POST | `/login` | `login.post` | `AuthController@login` | Process login |
 | POST | `/logout` | `logout` | `AuthController@logout` | Logout user |
@@ -254,29 +257,24 @@ Reusable sidebar partial included by all role-specific layouts. Renders navigati
 
 ### `welcome.blade.php`
 **Path:** `resources/views/welcome.blade.php`
-**Route:** — (legacy placeholder; the actual homepage is `public/calendar.blade.php`)
-**Layout:** `layouts.app`
-
-A simple placeholder card with "Facility Schedule" heading and text stating this is a public page. Not actively used — superseded by the public calendar.
-
----
-
-### `public/calendar.blade.php`
-**Path:** `resources/views/public/calendar.blade.php`
 **Route:** `GET /` → `home`
 **Layout:** `layouts.app`
 
-The actual public homepage. Shows a read-only monthly calendar of confirmed facility bookings.
+The public landing page and reservation calendar. It includes a no-sign-in tracker for facility requests, bookings, and maintenance tickets.
 
 **Features:**
+- Public tracker accepts Facility (FM), Booking (BK; code prefix `BKG-`), or Maintenance (RM).
+- Requires the tracking code and the last name of the person who submitted the record. Code and surname must both match; a mismatch does not reveal whether the record exists.
+- Shows status and relevant request/schedule details without exposing requester identity. Lookup results are read-only for internal records.
+- Approved guest facility requests may show temporary signed PDF and payment-receipt actions when applicable; receipt upload is handled by the signed `ticket.payment.upload` route.
+- Rate-limited JSON lookup: `GET /track/ticket` (`ticket.lookup`, 20 requests/minute).
+- The tracker uses a two-row desktop search card and stacks its fields on narrow screens.
 - Month navigation (Prev / Next links)
 - 7-column calendar grid (Mon–Sun) displaying bookings per day
 - Each booking card shows: facility name, time range, purpose (truncated to 60 chars)
 - Only approved and rescheduled bookings are shown
-- For authenticated users: shows signed-in name and logout link
-- For guests: shows a "Sign in" link
-
-**Data Required:** `$currentMonth` (Carbon), `$days` (array keyed by date string → bookings)
+- Displays unavailable/maintenance facilities and selected-day booking details.
+- Calendar data: `$currentMonth` (Carbon), `$days` (array keyed by date string → bookings), `$unavailableFacilities`, `$selectedDate`, and `$selectedDateBookings`.
 
 ---
 
@@ -810,8 +808,7 @@ layouts/
 └── partials/
     └── sidebar.blade.php       ← Reusable sidebar partial
 
-welcome.blade.php               ← Legacy homepage placeholder
-public/calendar.blade.php       ← Public booking calendar (actual homepage)
+welcome.blade.php               ← Public homepage, reservation calendar, and FM/BK/RM tracker
 auth/login.blade.php            ← Login page
 
 admin/
