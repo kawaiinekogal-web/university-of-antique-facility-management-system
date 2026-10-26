@@ -23,7 +23,10 @@ class GuestRequestEmailService
         }
 
         $requesterName = trim((string) ($payload['client_name'] ?? $payload['requester_name'] ?? 'Guest'));
-        $lastName = collect(preg_split('/\s+/', $requesterName))->last() ?? '';
+        $lastName = trim((string) ($payload['requester_last_name'] ?? ''));
+        if ($lastName === '') {
+            $lastName = collect(preg_split('/\s+/', $requesterName))->last() ?? '';
+        }
         $trackingCode = 'FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-'
             . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT);
 

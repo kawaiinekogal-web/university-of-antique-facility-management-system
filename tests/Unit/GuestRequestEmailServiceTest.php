@@ -17,7 +17,8 @@ class GuestRequestEmailServiceTest extends TestCase
             'requester_type' => 'guest',
             'payload' => [
                 'email' => 'guest@example.com',
-                'client_name' => 'Taylor Guest',
+                'client_name' => 'Taylor Dela Cruz',
+                'requester_last_name' => 'Dela Cruz',
             ],
         ]);
         $submission->setAttribute('id', 42);
@@ -27,6 +28,7 @@ class GuestRequestEmailServiceTest extends TestCase
         Mail::assertSent(GuestRequestStatusUpdate::class, function (GuestRequestStatusUpdate $mail) {
             return $mail->hasTo('guest@example.com')
                 && $mail->trackingCode === 'FM-' . now()->format('Y') . '-00042'
+                && $mail->lastName === 'Dela Cruz'
                 && $mail->event === 'approved';
         });
     }

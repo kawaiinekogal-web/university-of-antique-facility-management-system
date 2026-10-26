@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Mail\GuestRequestStatusUpdate;
 use App\Models\Booking;
 use App\Models\Facility;
 use App\Models\FormSubmission;
 use App\Models\MaintenanceTicket;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class TicketLookupTest extends TestCase
@@ -126,6 +129,66 @@ class TicketLookupTest extends TestCase
         $this->getJson('/track/ticket?type=BK&code=' . $booking->booking_code . '&last_name=Dela%20Cruz')
             ->assertOk()
             ->assertJsonPath('code', $booking->booking_code);
+    }
+
+    public function test_guest_request_can_be_approved_booked_and_tracked_with_its_explicit_last_name(): void
+    {
+        Mail::fake();
+        $notifications = \Mockery::mock(NotificationService::class);
+        $notifications->shouldReceive('notifyBookingCreated')->once();
+        $notifications->shouldReceive('notifyFormApproved')->once();
+        $this->app->instance(NotificationService::class, $notifications);
+
+        $walkIn = $this->user('guest');
+        $facility = Facility::create([
+            'name' => 'Guest Booking Test Hall',
+            'location' => 'Test Campus',
+            'owner_type' => 'gsu',
+            'is_active' => true,
+            'availability_status' => 'available',
+        ]);
+        $submission = FormSubmission::create([
+            'type' => 'facilities_utilization',
+            'requester_id' => $walkIn->id,
+            'requester_type' => 'guest',
+            'requester_unit' => 'Community Partner',
+            'status' => 'pending',
+            'payment_status' => 'not_required',
+            'payload' => [
+                'requester_name' => 'Maria Jo Dela Cruz',
+                'requester_last_name' => 'Dela Cruz',
+                'client_name' => 'Maria Jo Dela Cruz',
+                'email' => 'guest@example.test',
+                'facility_ids' => [$facility->id],
+                'date_activity' => now()->addDays(40)->toDateString(),
+                'date_request' => now()->toDateTimeString(),
+                'time_range' => ['start' => '09:00', 'end' => '10:00'],
+                'purpose' => 'Successful guest booking test',
+            ],
+        ]);
+        $admin = $this->user('admin');
+
+        $this->actingAs($admin)
+            ->post('/admin/forms/facilities/' . $submission->id . '/approve')
+            ->assertRedirect(route('admin.forms.facilities.index'));
+
+        $booking = Booking::where('requester_id', $walkIn->id)->firstOrFail();
+        $this->assertSame('reserved', $submission->fresh()->status);
+        $this->assertSame('reserved', $booking->status);
+        $this->assertSame($submission->id, $booking->additional_details['form_submission_id']);
+
+        $this->getJson('/track/ticket?type=BK&code=' . $booking->booking_code . '&last_name=Dela%20Cruz')
+            ->assertOk()
+            ->assertJsonPath('code', $booking->booking_code)
+            ->assertJsonPath('status', 'reserved');
+        $this->getJson('/track/ticket?type=BK&code=' . $booking->booking_code . '&last_name=Cruz')
+            ->assertNotFound();
+
+        Mail::assertSent(GuestRequestStatusUpdate::class, fn (GuestRequestStatusUpdate $mail) =>
+            $mail->hasTo('guest@example.test')
+            && $mail->lastName === 'Dela Cruz'
+            && $mail->event === 'approved'
+        );
     }
 
     public function test_guest_booking_lookup_requires_the_requesters_last_name(): void
