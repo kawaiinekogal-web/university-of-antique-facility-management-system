@@ -18,7 +18,7 @@ The central authentication model. Extends Laravel's `Authenticatable` base. Repr
 | `last_name` | string(120) | nullable for legacy accounts; required when creating/updating an account | Exact name value used for public status verification; not parsed from `name` |
 | `email` | string | required, unique | Login email |
 | `email_verified_at` | timestamp | nullable | Email verification timestamp |
-| `password` | string | required, hashed | Bcrypt-hashed password |
+| `password` | string | required, hashed | Argon2id-hashed password; legacy bcrypt hashes remain verifiable during migration |
 | `remember_token` | string | nullable | "Remember me" session token |
 | `role` | string | default `'viewer'` | Roles include `admin`, `college_staff`, `org_staff`, `guest`, and legacy/general `viewer`; public guests do not sign in |
 | `college_name` | string | nullable | College affiliation (used when `role = college_staff`) |
@@ -490,6 +490,12 @@ Stores selectable signatories used by facility-request forms. Fillable fields ar
 **Table:** `maintenance_ticket_messages`
 
 Stores messages between a college team and GSU for a maintenance ticket. Fillable fields are `maintenance_ticket_id`, `user_id`, and `body`. `ticket()` and `user()` are `belongsTo` relations. Ticket access is scoped in the controllers; organization tickets do not use this conversation workflow.
+
+## 14. `AuditLog`
+**File:** `app/Models/AuditLog.php`
+**Table:** `audit_logs`
+
+Stores actor, action, polymorphic subject, redacted before/after field data, request IP/user agent, route, and timestamp. Application model create/update/delete events and authentication login/logout events are recorded. Audit entries are visible through the admin-only `/admin/audit-logs` page and are not editable there.
 
 ---
 

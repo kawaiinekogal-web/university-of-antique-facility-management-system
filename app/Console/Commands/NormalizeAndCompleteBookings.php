@@ -16,7 +16,13 @@ class NormalizeAndCompleteBookings extends Command
     public function handle(): int
     {
         [$normalized, $completed] = DB::transaction(function () {
-            $normalized = Booking::where('status', 'booked')->update(['status' => 'reserved']);
+            $legacyBookings = Booking::where('status', 'booked')->lockForUpdate()->get();
+            foreach ($legacyBookings as $booking) {
+                $booking->status = 'reserved';
+                $booking->save();
+            }
+
+            $normalized = $legacyBookings->count();
             $expired = Booking::whereIn('status', ['reserved', 'rescheduled'])
                 ->where('end_time', '<', now())
                 ->lockForUpdate()
@@ -36,7 +42,12 @@ class NormalizeAndCompleteBookings extends Command
             if ($submissionIds) {
                 FormSubmission::whereIn('id', array_unique($submissionIds))
                     ->whereIn('status', ['approved', 'reserved'])
-                    ->update(['status' => 'completed']);
+                    ->lockForUpdate()
+                    ->get()
+                    ->each(function (FormSubmission $submission): void {
+                        $submission->status = 'completed';
+                        $submission->save();
+                    });
             }
 
             return [$normalized, $expired->count()];

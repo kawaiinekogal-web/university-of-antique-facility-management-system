@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Booking;
 use App\Models\Facility;
+use App\Rules\OperatingHours;
+use App\Rules\PersonName;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -30,7 +32,7 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'last_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120', new PersonName],
             'date_activity' => 'required|date|after_or_equal:' . now()->addDays(30)->toDateString(),
             // Optional last day for multi-day events (same start/end time every day), up to 14 days in total
             'date_end'      => [
@@ -44,8 +46,8 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
                     }
                 },
             ],
-            'start_time'    => 'required|date_format:H:i',
-            'end_time'      => 'required|date_format:H:i|after:start_time',
+            'start_time'    => ['required', 'date_format:H:i', new OperatingHours],
+            'end_time'      => ['required', 'date_format:H:i', 'after:start_time', new OperatingHours],
             'facility_ids.*' => ['required', 'integer', 'distinct', 'exists:facilities,id'],
             'facility_ids' => [
                 'required',

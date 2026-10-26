@@ -117,20 +117,21 @@
                                 <div class="dp-times">
                                     <div class="pk-field">
                                         <label for="start_time" class="pk-label">Start Time <span class="pk-req">*</span></label>
-                                        <input type="time" name="start_time" id="start_time" required class="pk-input" value="{{ old('start_time') }}">
+                                        <input type="time" name="start_time" id="start_time" required min="06:00" max="19:00" class="pk-input" value="{{ old('start_time') }}">
                                     </div>
                                     <div class="pk-field">
                                         <label for="end_time" class="pk-label">End Time <span class="pk-req">*</span></label>
-                                        <input type="time" name="end_time" id="end_time" required class="pk-input" value="{{ old('end_time') }}">
+                                        <input type="time" name="end_time" id="end_time" required min="06:00" max="19:00" class="pk-input" value="{{ old('end_time') }}">
                                     </div>
                                 </div>
                             </div>
+                            <p class="pk-help">Reservations must start and end between 6:00 AM and 7:00 PM.</p>
                             <div id="time-availability" class="time-availability is-neutral" role="status" aria-live="polite" data-conflict="false">
                                 <strong>Availability check</strong>
                                 <p>Choose a date, facility and time to check for conflicts.</p>
                             </div>
                             <p class="dp-span" id="dp-span" hidden></p>
-                            <p class="pk-help" id="dp-help">Pick a day on the calendar or type it. Requests need at least 30 days' notice.</p>
+                            <p class="pk-help" id="dp-help">Pick a day on the calendar or type it. Requests need at least 30 days' notice and must be between 6:00 AM and 7:00 PM.</p>
                             <div class="dp-dayinfo" id="dp-dayinfo" aria-live="polite">
                                 <h3>On this day</h3>
                                 <p>Pick a date to see what's already booked.</p>

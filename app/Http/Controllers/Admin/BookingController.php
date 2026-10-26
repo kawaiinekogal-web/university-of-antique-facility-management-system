@@ -7,6 +7,8 @@ use App\Http\Controllers\Traits\GroupsBookingsByDay;
 use App\Models\Booking;
 use App\Models\Facility;
 use App\Models\Notification;
+use App\Rules\OperatingHours;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use App\Services\BookingService;
 use App\Services\GuestRequestEmailService;
@@ -89,8 +91,8 @@ class BookingController extends Controller
             'facility_ids'   => 'required|array|min:1',
             'facility_ids.*' => 'required|distinct|exists:facilities,id',
             'date_activity' => 'required|date|after_or_equal:today',
-            'start_time'    => 'required|date_format:H:i',
-            'end_time'      => 'required|date_format:H:i|after:start_time',
+            'start_time'    => ['required', 'date_format:H:i', new OperatingHours],
+            'end_time'      => ['required', 'date_format:H:i', 'after:start_time', new OperatingHours],
             'purpose'       => 'required|string|max:500',
             'requester_name' => 'required|string|max:255',
 
@@ -250,8 +252,8 @@ class BookingController extends Controller
             'facility_ids'   => 'required|array',
             'facility_ids.*' => 'required|distinct|exists:facilities,id',
             'date_activity' => 'required|date|after_or_equal:today',
-            'start_time'    => 'required|date_format:H:i',
-            'end_time'      => 'required|date_format:H:i|after:start_time',
+            'start_time'    => ['required', 'date_format:H:i', new OperatingHours],
+            'end_time'      => ['required', 'date_format:H:i', 'after:start_time', new OperatingHours],
             'purpose'       => 'required|string|max:500',
             'reason'        => 'required|string|max:500',
 
@@ -322,7 +324,13 @@ class BookingController extends Controller
                 ]);
             }
 
+            $previousFacilityIds = $booking->facilities()->pluck('facilities.id')->map(fn ($id) => (int) $id)->all();
             $booking->facilities()->sync($data['facility_ids']);
+            app(AuditLogService::class)->record('facilities_updated', $booking, [
+                'facility_ids' => $previousFacilityIds,
+            ], [
+                'facility_ids' => array_map('intval', $data['facility_ids']),
+            ]);
             $booking->start_time = $startDateTime;
             $booking->end_time = $endDateTime;
             $booking->purpose = $data['purpose'];

@@ -9,6 +9,10 @@ A role-based web application for facility requests and reservations, maintenance
 - College and organization-unit portals for facility requests and maintenance reporting.
 - GSU administration for facilities, request approvals, reservations, users, and maintenance ticket updates.
 - Staff accounts can be deactivated without deleting their request and reservation history.
+- Account names allow letters, spaces, hyphens, and apostrophes. New passwords require 8–94 characters, uppercase and lowercase letters, and a special character.
+- Reservations are limited to 6:00 AM–7:00 PM. Public guest venue choices display the current published rate.
+- Admins can search a read-only audit trail of account, reservation, facility, request, and maintenance changes.
+- Laravel Reverb and Echo are configured for WebSocket broadcasting; existing maintenance conversations continue to use polling until a feature is migrated.
 - Official facility and repair/maintenance form generation.
 - Explicit tracking last names for new submissions; the tracker does not guess a surname from a full name. Legacy records without one retain legacy matching.
 
@@ -38,10 +42,9 @@ Configure the database connection and any mail/storage settings in `.env`, then 
 ```bash
 php artisan migrate
 php artisan db:seed
-php artisan serve
 ```
 
-Open the URL printed by Artisan (normally `http://127.0.0.1:8000`). Do not use seeded sample credentials or development configuration in production.
+Run `composer run dev` to start the local Laravel server, queue worker, logs, Vite, and Reverb WebSocket server. Open the URL printed by Artisan (normally `http://127.0.0.1:8000`). Do not use seeded sample credentials or development configuration in production.
 
 ## Tests
 

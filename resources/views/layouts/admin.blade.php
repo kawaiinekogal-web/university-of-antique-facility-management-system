@@ -40,6 +40,7 @@
             'links' => [
                 ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users'],
                 ['label' => 'Create user', 'route' => 'admin.users.create', 'icon' => 'user-plus'],
+                ['label' => 'Audit trail', 'route' => 'admin.audit-logs.index', 'icon' => 'records'],
             ],
         ],
     ],

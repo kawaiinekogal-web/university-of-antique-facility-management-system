@@ -33,6 +33,7 @@ The maintained application is the Laravel web system. Desktop, Electron, and And
 | Templating | Blade | (bundled with Laravel) | Server-side HTML rendering |
 | Database | MySQL | — | Production relational database |
 | Session Driver | Database in `.env.example` | — | Session-based authentication; another supported driver may be configured |
+| Broadcasting | Laravel Reverb + Echo | Reverb 1.x / Echo 2.x | WebSocket infrastructure; existing conversations continue polling |
 
 ### Backend Dependencies (Composer)
 
@@ -74,6 +75,7 @@ The maintained application is the Laravel web system. Desktop, Electron, and And
 | `crypto-js` | Dependency present; not a substitute for server-side controls |
 | `bcryptjs` | Dependency present; Laravel performs server-side password hashing |
 | `jsonwebtoken` | Dependency present; staff web authentication uses Laravel sessions |
+| `laravel-echo`, `pusher-js` | Reverb WebSocket client |
 
 ### Frontend Dev Dependencies
 
@@ -531,12 +533,23 @@ classDiagram
         +bool is_active
     }
 
+    class AuditLog {
+        +bigint id
+        +bigint actor_id
+        +string action
+        +string subject_type
+        +bigint subject_id
+        +json old_values
+        +json new_values
+    }
+
     User "1" --> "*" Booking : requester_id
     User "1" --> "*" MaintenanceTicket : requester_id
     User "1" --> "*" StaffAssignment : staff_id
     User "1" --> "*" MaintenanceLog : staff_id
     User "1" --> "*" Notification : user_id
     User "1" --> "*" FormSubmission : requester_id
+    User "1" --> "*" AuditLog : actor_id (nullable)
 
     College "1" --> "*" User : college_id
     College "1" --> "*" Facility : college_id
@@ -675,6 +688,7 @@ classDiagram
 | User → MaintenanceLogs | User | MaintenanceLog | One-to-Many | `maintenance_logs.staff_id` | CASCADE |
 | User → Notifications | User | Notification | One-to-Many | `notifications.user_id` | CASCADE |
 | User → FormSubmissions | User | FormSubmission | One-to-Many | `form_submissions.requester_id` | CASCADE |
+| User → AuditLogs | User | AuditLog | One-to-Many | `audit_logs.actor_id` | SET NULL |
 | User → TicketMessages | User | MaintenanceTicketMessage | One-to-Many | `maintenance_ticket_messages.user_id` | SET NULL |
 | Facility ↔ Bookings | Facility | Booking | Many-to-Many | `booking_facility.facility_id`, `booking_facility.booking_id` | CASCADE |
 | Facility → MaintenanceTickets | Facility | MaintenanceTicket | One-to-Many | `maintenance_tickets.facility_id` | CASCADE |

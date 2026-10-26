@@ -103,15 +103,15 @@
                                 <div class="dp-times">
                                     <div class="pk-field">
                                         <label for="start_time" class="pk-label">Start Time <span class="pk-req">*</span></label>
-                                        <input type="time" name="start_time" id="start_time" class="pk-input" required value="{{ old('start_time') }}">
+                                        <input type="time" name="start_time" id="start_time" class="pk-input" required min="06:00" max="19:00" value="{{ old('start_time') }}">
                                     </div>
                                     <div class="pk-field">
                                         <label for="end_time" class="pk-label">End Time <span class="pk-req">*</span></label>
-                                        <input type="time" name="end_time" id="end_time" class="pk-input" required value="{{ old('end_time') }}">
+                                        <input type="time" name="end_time" id="end_time" class="pk-input" required min="06:00" max="19:00" value="{{ old('end_time') }}">
                                     </div>
                                 </div>
                             </div>
-                            <p class="pk-help">Pick a day on the calendar or type it.</p>
+                            <p class="pk-help">Pick a day on the calendar or type it. Reservations must be between 6:00 AM and 7:00 PM.</p>
                             <div class="dp-dayinfo" id="dp-dayinfo" aria-live="polite">
                                 <h3>On this day</h3>
                                 <p>Pick a date to see what's already booked.</p>

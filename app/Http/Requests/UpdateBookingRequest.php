@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\OperatingHours;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateBookingRequest extends FormRequest
@@ -16,8 +17,8 @@ class UpdateBookingRequest extends FormRequest
         return [
             'facility_id'   => 'required|exists:facilities,id',
             'date_activity' => 'required|date',
-            'start_time'    => 'required|date_format:H:i',
-            'end_time'      => 'required|date_format:H:i|after:start_time',
+            'start_time'    => ['required', 'date_format:H:i', new OperatingHours],
+            'end_time'      => ['required', 'date_format:H:i', 'after:start_time', new OperatingHours],
             'purpose'       => 'required|string|max:500',
             'reason'        => 'required|string|max:500',
             'qty_monobloc'  => 'nullable|integer|min:0',

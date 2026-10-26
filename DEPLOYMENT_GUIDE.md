@@ -19,6 +19,8 @@ APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://your-domain.example
 APP_KEY=<generate-a-unique-key-with-artisan>
+HASH_DRIVER=argon2id
+HASH_VERIFY=false
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -53,6 +55,24 @@ php artisan view:cache
 Generate `APP_KEY` with `php artisan key:generate` only for a new installation; preserve the existing key during routine deploys or encrypted/session data may become unreadable. Configure PHP-FPM/web-server permissions so `storage/` and `bootstrap/cache/` are writable by the application service user. Point the virtual host document root at `public/`, enable TLS, and ensure `APP_DEBUG=false`.
 
 Run `php artisan db:seed` only when intentionally setting up development/sample data. Do not seed sample accounts into production.
+
+The application uses Argon2id so passwords up to 94 characters are supported. `HASH_VERIFY=false` allows existing bcrypt password hashes to be verified and rehashed automatically at successful login; retain this setting until legacy accounts have migrated.
+
+## WebSocket broadcasting
+
+Laravel Reverb is the configured broadcaster, and Laravel Echo is included in the Vite bundle. Set unique `REVERB_APP_ID`, `REVERB_APP_KEY`, and `REVERB_APP_SECRET` values through the deployment secret store. Set `REVERB_HOST`, `REVERB_PORT`, and `REVERB_SCHEME` to the public WebSocket endpoint, and restrict `REVERB_ALLOWED_ORIGINS` to the deployment's hostnames (host only, comma-separated).
+
+Run the Reverb server under Supervisor or systemd, binding it to loopback behind the TLS-terminating web server:
+
+```bash
+php artisan reverb:start --host=127.0.0.1 --port=8080
+```
+
+Configure Nginx/Apache to proxy WebSocket upgrades from the public WSS endpoint to that process. Keep the Reverb app secret private and allow the configured public WebSocket port through the firewall only where required. Developers can start Reverb alongside the other local services with `composer run dev`. Broadcasting infrastructure is enabled; current maintenance conversations continue polling and are not yet broadcast events.
+
+## Audit trail
+
+Apply the `audit_logs` migration during deployment. Admins can review and filter changes at `/admin/audit-logs`. Audit rows are append-only through the application UI, include actor/request metadata and field diffs, and redact passwords, contact details, submitted payloads, and message/file contents.
 
 ## Private receipts and supporting files
 

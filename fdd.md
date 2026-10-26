@@ -35,6 +35,7 @@ This document describes the functional behavior of the system from a user and bu
 - Generate official PDF forms (Facilities Utilization, Repair & Maintenance).
 - Review and update repair/maintenance tickets submitted by staff.
 - Manage portal user accounts (admins, college staff, org staff).
+- Review the read-only audit trail for application changes and sign-in/sign-out activity.
 - View system‑wide analytics (monthly reservations per facility, daily counts).
 
 ### 2.3 College Staff
@@ -102,8 +103,9 @@ This document describes the functional behavior of the system from a user and bu
 1. **Form fields (College & Org)**:
    - Date of activity (must be at least 30 days from today).
    - Optional end date for a continuous event range (maximum 14 days including the start date).
-   - Start time and end time (end > start).
+   - Start time and end time (end > start; both must be between 6:00 AM and 7:00 PM, inclusive).
    - One or more facilities from the active facility list; all share the same dates and times.
+   - Public guest venue selection displays the published rental rate for each venue.
    - Purpose of activity.
    - Equipment quantities:
      - Monobloc chairs, tables, fans, rostrum, flag & school color, sound, LED wall.

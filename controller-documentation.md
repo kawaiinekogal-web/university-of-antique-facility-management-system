@@ -236,6 +236,15 @@ For an approved guest facility request, `show` may return a temporary signed PDF
 
 Downloads are private and non-cacheable. New uploads use the private `payment_receipts` disk; legacy paths are accepted only from their expected storage prefixes.
 
+## 25. `Admin\AuditLogController`
+**File:** `app/Http/Controllers/Admin/AuditLogController.php`
+
+| Method | HTTP | Route | Description |
+|---|---|---|---|
+| `index(Request $request)` | GET | `/admin/audit-logs` (`admin.audit-logs.index`) | Admin-only, read-only audit history with search, action/type filters, and pagination. Shows actors, subjects, request metadata, and redacted before/after diffs. |
+
+`AuditObserver` records create, update, and delete events for application models; login/logout events are recorded separately. Sensitive values (including passwords, contact information, submitted payloads, and message/file contents) are redacted.
+
 ## Other current controllers
 
 - `Admin\MonthlyRecordsController` serves `/admin/monthly-records` and its chart export route.

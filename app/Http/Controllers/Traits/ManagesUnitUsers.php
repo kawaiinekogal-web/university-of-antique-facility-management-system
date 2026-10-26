@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Traits;
 
+use App\Rules\PersonName;
 use App\Models\User;
 use App\Services\AccountDeactivationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * Team accounts for a college (college staff) or an organization (org staff).
@@ -40,7 +42,7 @@ trait ManagesUnitUsers
 
     protected function nameRules(): array
     {
-        return ['required', 'string', 'max:255'];
+        return ['required', 'string', 'max:255', new PersonName];
     }
 
     public function index()
@@ -67,11 +69,11 @@ trait ManagesUnitUsers
 
         $data = $request->validate([
             'name'     => $this->nameRules(),
-            'last_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120', new PersonName],
             'contact_number' => ['nullable', 'string', 'regex:/^\d{4}-?\d{3}-?\d{4}$/'],
             'position' => 'required|string|max:120',
             'email'    => 'required|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => ['required', 'string', 'confirmed', Password::min(8)->max(94)->mixedCase()->symbols()],
         ], self::CONTACT_NUMBER_MESSAGES);
 
         User::create([
@@ -105,11 +107,11 @@ trait ManagesUnitUsers
 
         $data = $request->validate([
             'name'     => $this->nameRules(),
-            'last_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120', new PersonName],
             'contact_number' => ['nullable', 'string', 'regex:/^\d{4}-?\d{3}-?\d{4}$/'],
             'position' => [$canManage ? 'required' : 'nullable', 'string', 'max:120'],
             'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => 'nullable|string|min:8|confirmed',
+            'password' => ['nullable', 'string', 'confirmed', Password::min(8)->max(94)->mixedCase()->symbols()],
         ], self::CONTACT_NUMBER_MESSAGES);
 
         $user->name  = $data['name'];

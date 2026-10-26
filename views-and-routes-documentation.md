@@ -119,6 +119,7 @@ College tickets are shared within the college and have a conversation with GSU. 
 | GET | `/admin/users/{user}/edit` | `admin.users.edit` | `Admin\UserController@edit` | Edit an account |
 | PUT | `/admin/users/{user}` | `admin.users.update` | `Admin\UserController@update` | Update an account |
 | PATCH | `/admin/users/{user}/deactivate` | `admin.users.deactivate` | `Admin\UserController@deactivate` | Deactivate an account while preserving its history |
+| GET | `/admin/audit-logs` | `admin.audit-logs.index` | `Admin\AuditLogController@index` | Search the read-only audit trail (admins only) |
 | GET | `/admin/monthly-records` | `admin.monthly-records.index` | `Admin\MonthlyRecordsController@index` | View monthly utilization records |
 | GET | `/admin/monthly-records/export` | `admin.monthly-records.export` | `Admin\MonthlyRecordsController@exportCharts` | Export monthly chart data |
 
@@ -565,7 +566,7 @@ Form to create a new user.
 |---|---|---|---|
 | Name | text | Yes | |
 | Email | email | Yes | |
-| Password | password | Yes | Min 8 characters |
+| Password | password | Yes | 8–94 characters, uppercase and lowercase letters, and a special character |
 | Confirm Password | password | Yes | Must match password |
 | Role | select | Yes | Options: Admin, College Staff, Organization Staff |
 | College Name | text | Conditional | Shown when role = "college_staff" |
@@ -574,6 +575,17 @@ Form to create a new user.
 **JavaScript:** Toggles college/org name fields based on selected role.
 
 **Submits to:** POST `admin.users.store`
+
+Names allow letters, spaces, hyphens, and apostrophes. The same account rules apply when editing accounts and in the college/organization team-user forms.
+
+---
+
+### `admin/audit-logs/index.blade.php`
+**Path:** `resources/views/admin/audit-logs/index.blade.php`
+**Route:** `GET /admin/audit-logs` → `admin.audit-logs.index`
+**Layout:** `layouts.admin`
+
+Read-only, searchable and filterable audit history with timestamp, actor, action, subject, redacted field diffs, route, and IP address.
 
 ---
 

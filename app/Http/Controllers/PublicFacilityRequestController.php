@@ -8,6 +8,7 @@ use App\Mail\GuestRequestTrackingNumber;
 use App\Models\Facility;
 use App\Models\FormSubmission;
 use App\Models\User;
+use App\Rules\PersonName;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -45,8 +46,8 @@ class PublicFacilityRequestController extends Controller
         }
 
         $guest = $request->validate([
-            'client_name'            => 'required|string|max:120',
-            'last_name'              => 'required|string|max:120',
+            'client_name'            => ['required', 'string', 'max:120', new PersonName],
+            'last_name'              => ['required', 'string', 'max:120', new PersonName],
             'contact_number'         => 'required|string|max:40',
             'email'                  => 'required|email|max:160',
             'address'                => 'required|string|max:255',

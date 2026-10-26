@@ -8,10 +8,12 @@ use App\Models\Booking;
 use App\Models\FormSubmission;
 use App\Models\MaintenanceTicket;
 use App\Models\User;
+use App\Rules\PersonName;
 use App\Services\AccountDeactivationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -89,11 +91,11 @@ class UserController extends Controller
         $isSelf = $user->id === auth()->id();
 
         $validated = $request->validate([
-            'name'              => 'required|string|max:255',
-            'last_name'         => 'required|string|max:120',
+            'name'              => ['required', 'string', 'max:255', new PersonName],
+            'last_name'         => ['required', 'string', 'max:120', new PersonName],
             'contact_number'    => ['nullable', 'string', 'regex:/^\d{4}-?\d{3}-?\d{4}$/'],
             'email'             => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password'          => 'nullable|string|min:8|confirmed',
+            'password'          => ['nullable', 'string', 'confirmed', Password::min(8)->max(94)->mixedCase()->symbols()],
             // You can't take away your own admin access (you'd be locked out of this page)
             'role'              => $isSelf ? 'required|in:admin' : 'required|in:admin,college_staff,org_staff,guest',
             'college_name'      => 'nullable|string|max:255',

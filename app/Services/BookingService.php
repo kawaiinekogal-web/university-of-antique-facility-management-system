@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Booking;
 use App\Models\Facility;
 use App\Models\FormSubmission;
+use App\Services\AuditLogService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -149,6 +150,9 @@ class BookingService
                 ]);
 
                 $created->facilities()->sync($facilityIds);
+                app(AuditLogService::class)->record('facilities_attached', $created, newValues: [
+                    'facility_ids' => $facilityIds,
+                ]);
                 $first ??= $created;
             }
 
@@ -208,7 +212,12 @@ class BookingService
             if ($preemptedSubmissionIds->isNotEmpty()) {
                 FormSubmission::whereIn('id', $preemptedSubmissionIds)
                     ->where('status', 'reserved')
-                    ->update(['status' => 'pending']);
+                    ->lockForUpdate()
+                    ->get()
+                    ->each(function (FormSubmission $submission): void {
+                        $submission->status = 'pending';
+                        $submission->save();
+                    });
             }
 
             $equipment = $this->buildEquipmentArray($data);
@@ -230,6 +239,9 @@ class BookingService
                 'booking_code'       => $bookingCode,
             ]);
             $booking->facilities()->sync($facilityIds);
+            app(AuditLogService::class)->record('facilities_attached', $booking, newValues: [
+                'facility_ids' => $facilityIds,
+            ]);
 
             $submission = FormSubmission::create([
                 'type'           => 'facilities_utilization',

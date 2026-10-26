@@ -6,8 +6,17 @@
     $minActivityDate = now()->addDays(30)->toDateString(); // same rule as StoreFacilitiesUtilizationRequest
     // Official per-day rates by venue name (from the shared rate sheet; facilities have no fee column)
     $normName = fn ($n) => preg_replace('/[^a-z0-9]+/', ' ', strtolower(trim((string) $n)));
-    $rateByName = collect(include resource_path('views/public/venue-rates.php'))
+    $venueRates = collect(include resource_path('views/public/venue-rates.php'));
+    $rateByName = $venueRates
         ->mapWithKeys(fn ($v) => [$normName($v['name']) => (float) str_replace(',', '', preg_replace('/^PhP\s*([\d,.]+).*$/', '$1', $v['rate']))]);
+    $rateLabelByName = $venueRates->mapWithKeys(function ($venue) use ($normName) {
+        $rate = str_replace('PhP', '₱', $venue['rate']);
+        if (! preg_match('/(?:\/\s*day|in a day)/i', $rate)) {
+            $rate .= ' / day';
+        }
+
+        return [$normName($venue['name']) => $rate];
+    });
     $equipmentList = [
         ['name' => 'qty_monobloc', 'label' => 'Monobloc Chair'],
         ['name' => 'qty_table', 'label' => 'Table'],
@@ -148,20 +157,21 @@
                                 <div class="dp-times">
                                     <div class="pk-field">
                                         <label for="start_time" class="pk-label">Start Time <span class="pk-req">*</span></label>
-                                        <input type="time" name="start_time" id="start_time" required class="pk-input" value="{{ old('start_time') }}">
+                                        <input type="time" name="start_time" id="start_time" required min="06:00" max="19:00" class="pk-input" value="{{ old('start_time') }}">
                                     </div>
                                     <div class="pk-field">
                                         <label for="end_time" class="pk-label">End Time <span class="pk-req">*</span></label>
-                                        <input type="time" name="end_time" id="end_time" required class="pk-input" value="{{ old('end_time') }}">
+                                        <input type="time" name="end_time" id="end_time" required min="06:00" max="19:00" class="pk-input" value="{{ old('end_time') }}">
                                     </div>
                                 </div>
                             </div>
+                            <p class="pk-help">Reservations must start and end between 6:00 AM and 7:00 PM.</p>
                             <div id="time-availability" class="time-availability is-neutral" role="status" aria-live="polite" data-conflict="false">
                                 <strong>Availability check</strong>
                                 <p>Choose a date, facility and time to check for conflicts.</p>
                             </div>
                             <p class="dp-span" id="dp-span" hidden></p>
-                            <p class="pk-help" id="dp-help">Pick a day on the calendar or type it. Requests need at least 30 days' notice.</p>
+                            <p class="pk-help" id="dp-help">Pick a day on the calendar or type it. Requests need at least 30 days' notice and must be between 6:00 AM and 7:00 PM.</p>
                             <div class="dp-dayinfo" id="dp-dayinfo" aria-live="polite">
                                 <h3>On this day</h3>
                                 <p>Pick a date to see what's already booked.</p>
@@ -200,6 +210,7 @@
                                 $statusLabel = $facility->availability_status === 'maintenance' ? 'Under Maintenance' : 'Unavailable';
                                 $owner = match ($facility->owner_type) { 'gsu' => 'GSU', 'college' => 'College (' . ($facility->owner_college ?? 'N/A') . ')', 'org' => 'Organization', default => ucfirst($facility->owner_type ?? '') };
                                 $fee = (float) ($rateByName[$normName($facility->name)] ?? 0);
+                                $rateLabel = $rateLabelByName[$normName($facility->name)] ?? 'Rate set by GSU';
                             @endphp
                             <div class="vb-card" data-name="{{ $facility->name }}">
                                 <input type="checkbox" name="facility_ids[]" id="venue-{{ $facility->id }}" value="{{ $facility->id }}"
@@ -211,7 +222,7 @@
                                     <span class="vb-top">
                                         <span class="u-minw-0">
                                             <span class="vb-name">{{ $facility->name }}</span>
-                                            <span class="vb-owner">{{ $owner }}<span class="vb-rate">{{ $fee > 0 ? '₱ ' . number_format($fee, 2) . ' / day' : 'Rate set by GSU' }}</span></span>
+                                            <span class="vb-owner">{{ $owner }}<span class="vb-rate">{{ $rateLabel }}</span></span>
                                         </span>
                                         <span class="vb-count"><strong class="vb-count-num">–</strong><span>booked</span></span>
                                     </span>
