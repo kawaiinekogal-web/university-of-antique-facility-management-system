@@ -48,8 +48,13 @@ Run `composer run dev` to start the local Laravel server, queue worker, logs, Vi
 
 ## Tests
 
+The test suite uses the dedicated MySQL database `ua_fms_testing`; it never targets the application database name from `.env`. Create that empty database and make sure the configured database user can access it before testing. `RefreshDatabase` rebuilds test tables and data.
+
 ```bash
+mysql -u root -p -e "CREATE DATABASE ua_fms_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 php artisan test
 ```
+
+GitHub Actions runs the automated test suite and production asset build on pushes and pull requests to `main`, using a temporary MySQL database.
 
 See [QUICKSTART.md](QUICKSTART.md), [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md), and [TESTING_GUIDE.md](TESTING_GUIDE.md) for setup and workflow details. The [Functional Design Document](fdd.md), [controller reference](controller-documentation.md), [routes and views reference](views-and-routes-documentation.md), [model reference](model-documentation.md), and [architecture/ERD](tech-stack-architecture-erd.md) describe the system.

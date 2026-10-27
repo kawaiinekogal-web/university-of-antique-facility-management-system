@@ -5,10 +5,13 @@
 Run the full Laravel suite from the repository root:
 
 ```bash
+mysql -u root -p -e "CREATE DATABASE ua_fms_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 php artisan test
 ```
 
-Tests use the configured test environment. Ensure the test database is isolated from any database containing data you need to preserve.
+PHPUnit is configured to use the dedicated MySQL database `ua_fms_testing`, not the application database name from `.env`. Create this empty database before running tests and ensure the configured database user can access it. Tests using `RefreshDatabase` rebuild test tables and data, so never change the test database setting to a database with data you need to preserve.
+
+GitHub Actions runs the suite against a temporary MySQL database and builds production frontend assets for pushes and pull requests to `main`.
 
 Relevant feature coverage includes:
 
