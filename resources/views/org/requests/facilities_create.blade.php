@@ -71,7 +71,7 @@
                         <button type="button" data-mode="single" aria-pressed="true">One day</button>
                         <button type="button" data-mode="multi" aria-pressed="false">Several days</button>
                     </div>
-                    <div class="dp">
+                    <div class="dp" data-calendar-url="{{ route('calendar.data') }}">
                         <div class="dp-cal">
                             <div class="dp-head">
                                 <p class="dp-month" id="dp-month" aria-live="polite"></p>
@@ -96,12 +96,12 @@
                                 <div class="dp-dates is-single" id="dp-dates">
                                     <div class="pk-field">
                                         <label for="date_activity" class="pk-label" id="dp-start-label">Date of Activity <span class="pk-req">*</span></label>
-                                        <input type="date" name="date_activity" id="date_activity" required class="pk-input" min="{{ $minActivityDate }}" value="{{ old('date_activity') }}">
+                                        <input type="text" name="date_activity" id="date_activity" required inputmode="numeric" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" placeholder="YYYY-MM-DD" class="pk-input" min="{{ $minActivityDate }}" value="{{ old('date_activity') }}">
                                     </div>
                                     <div class="pk-field dp-end">
                                         <label for="date_end" class="pk-label">End date <span class="pk-req">*</span></label>
                                         {{-- Only sent for multi-day events (disabled in One day mode) --}}
-                                        <input type="date" name="date_end" id="date_end" class="pk-input" min="{{ $minActivityDate }}" value="{{ old('date_end') }}" disabled>
+                                        <input type="text" name="date_end" id="date_end" inputmode="numeric" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" placeholder="YYYY-MM-DD" class="pk-input" min="{{ $minActivityDate }}" value="{{ old('date_end') }}" disabled>
                                     </div>
                                 </div>
                                 <div class="dp-times">
@@ -141,6 +141,11 @@
                         // Same order the controller gave (alphabetical)
                         $boardFacilities = collect($coreFacilities ?? [])->values();
                     @endphp
+                    @if ($boardFacilities->isEmpty())
+                        <p class="u-mb-4 u-rounded-xl u-border u-border-amber-200 u-bg-amber-50 u-p-4 u-text-sm" role="status">
+                            No venues are currently available to request. Please contact GSU Facility Management.
+                        </p>
+                    @endif
                     <div class="vb-head">
                         <span class="vb-day" id="vb-day">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
@@ -480,7 +485,7 @@ function adjustQty(fieldId, delta) {
         const minDate = input.min;                      // today + 30 days (server rule)
         const MAX_DAYS = 14;                            // server rule for date_end
         const todayKey = new Date().toLocaleDateString('en-CA');
-        const calendarUrl = @json(route('org.bookings.calendar'));
+        const calendarUrl = @json(route('calendar.data'));
         const cache = {};                               // 'YYYY-MM' -> { counts: {date: n}, items: {date: [{time, facility}]} }
         const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         const pad = (n) => String(n).padStart(2, '0');
@@ -549,22 +554,10 @@ function adjustQty(fieldId, delta) {
         function loadMonth(y, m) {
             const ym = y + '-' + pad(m + 1);
             if (cache[ym]) return Promise.resolve(cache[ym]);
-            return fetch(calendarUrl + '?month=' + ym, { headers: { Accept: 'text/html' }, credentials: 'same-origin' })
-                .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
-                .then(html => {
-                    const doc = new DOMParser().parseFromString(html, 'text/html');
-                    const data = { counts: {}, items: {} };
-                    doc.querySelectorAll('.cal-day[data-count]').forEach(el => { data.counts[el.dataset.date] = parseInt(el.dataset.count, 10) || 0; });
-                    doc.querySelectorAll('.res-table tr[data-date]').forEach(tr => {
-                        (data.items[tr.dataset.date] = data.items[tr.dataset.date] || []).push(describe({
-                            time: tr.dataset.time || '',
-                            start: tr.dataset.start || '',
-                            end: tr.dataset.end || '',
-                            status: tr.dataset.status || 'reserved',
-                            event: tr.dataset.event || '',
-                            who: tr.dataset.who || '',
-                            facility: (tr.querySelector('.res-fac-cell') || {}).textContent?.trim() || 'Facility'
-                        }));
+            return window.loadReservationCalendarMonth(calendarUrl, ym)
+                .then(data => {
+                    Object.keys(data.items).forEach(date => {
+                        data.items[date] = data.items[date].map(describe);
                     });
                     return (cache[ym] = data);
                 });

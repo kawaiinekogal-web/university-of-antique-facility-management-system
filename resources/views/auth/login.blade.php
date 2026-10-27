@@ -16,7 +16,7 @@
     $portalLabel = $portalLabels[request('portal')] ?? 'Facility Management Portal';
 @endphp
 
-<div class="login-page-wrapper">
+<div class="login-page-wrapper" style="--login-hero-image: url('{{ asset('img/facilities/grand-stand.jpg') }}')">
   <div class="login-container">
 
     <a href="{{ url('/') }}" class="home-return-link">

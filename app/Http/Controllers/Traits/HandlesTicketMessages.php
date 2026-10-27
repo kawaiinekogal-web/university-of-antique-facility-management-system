@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Traits;
 
+use App\Events\MaintenanceTicketMessageCreated;
 use App\Models\MaintenanceTicket;
 use App\Models\MaintenanceTicketMessage;
 use Illuminate\Http\Request;
@@ -67,6 +68,7 @@ trait HandlesTicketMessages
         $message->setRelation('user', auth()->user());
 
         $this->notifyNewMessage($ticket, $message);
+        broadcast(new MaintenanceTicketMessageCreated($ticket->id, $message->id));
 
         return $request->expectsJson()
             ? response()->json(['message' => $this->messageJson($message)], 201)

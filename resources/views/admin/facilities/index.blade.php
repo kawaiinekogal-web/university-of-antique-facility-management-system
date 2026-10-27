@@ -24,7 +24,7 @@
     };
 @endphp
 
-<div class="pk-page">
+<div class="pk-page fac-page" id="admin-facilities-page">
     <section class="pk-hero" style="--pk-img: url('{{ asset('img/facilities/busalian-hall.jpg') }}')">
         <div>
             <p class="pk-eyebrow">
@@ -45,7 +45,13 @@
     @if($facilities->count() > 0)
         <div class="pk-section-head">
             <h2 class="pk-section-title">All facilities</h2>
-            <span class="pk-section-meta">Showing {{ $facilities->firstItem() }}–{{ $facilities->lastItem() }} of {{ $facilities->total() }}</span>
+            <div class="u-row-8">
+                <span class="pk-section-meta">Showing {{ $facilities->firstItem() }}–{{ $facilities->lastItem() }} of {{ $facilities->total() }}</span>
+                <button type="button" class="pk-btn-outline" id="manage-facilities-toggle" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                    Manage facilities
+                </button>
+            </div>
         </div>
 
         <div class="fac-grid">
@@ -77,6 +83,9 @@
                         @endif
                         <span class="pk-tag">{{ $ownerLabel }}{{ $facility->owner_college ? ' · ' . $facility->owner_college : '' }}</span>
                         <span class="pk-pill {{ $statusTone }} fac-avail">{{ ucfirst($status) }}</span>
+                        @unless ($facility->is_active)
+                            <span class="pk-pill is-neutral fac-deactivated">Deactivated</span>
+                        @endunless
                     </div>
                     <div class="fac-body">
                         <h3 class="fac-name">{{ $facility->name }}</h3>
@@ -92,16 +101,18 @@
                         @endif
                     </div>
                     <div class="fac-actions">
-                        <a href="{{ route('admin.facilities.edit', $facility) }}" class="pk-row-link">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
-                            Edit
+                        <a href="{{ route('admin.facilities.edit', $facility) }}" class="fac-action-btn" aria-label="Edit {{ $facility->name }}" title="Edit facility">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
                         </a>
-                        <form action="{{ route('admin.facilities.destroy', $facility) }}" method="POST" data-confirm="Are you sure you want to delete this facility?" data-confirm-title="Delete facility?" data-confirm-action="Delete facility" data-confirm-tone="danger">
+                        <form action="{{ route($facility->is_active ? 'admin.facilities.deactivate' : 'admin.facilities.activate', $facility) }}" method="POST" data-confirm="{{ $facility->is_active ? 'Deactivate' : 'Activate' }} {{ $facility->name }}?" data-confirm-title="{{ $facility->is_active ? 'Deactivate facility?' : 'Activate facility?' }}" data-confirm-action="{{ $facility->is_active ? 'Deactivate' : 'Activate' }} facility" data-confirm-tone="{{ $facility->is_active ? 'danger' : 'default' }}">
                             @csrf
-                            @method('DELETE')
-                            <button type="submit" class="fac-delete" aria-label="Delete {{ $facility->name }}">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-                                Delete
+                            @method('PATCH')
+                            <button type="submit" class="fac-action-btn {{ $facility->is_active ? 'is-danger' : 'is-activate' }}" aria-label="{{ $facility->is_active ? 'Deactivate' : 'Activate' }} {{ $facility->name }}" title="{{ $facility->is_active ? 'Deactivate' : 'Activate' }} facility">
+                                @if ($facility->is_active)
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>
+                                @else
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                @endif
                             </button>
                         </form>
                     </div>
@@ -119,4 +130,14 @@
         </div>
     @endif
 </div>
+<script>
+    document.getElementById('manage-facilities-toggle')?.addEventListener('click', function () {
+        const isManaging = this.getAttribute('aria-pressed') !== 'true';
+        this.setAttribute('aria-pressed', String(isManaging));
+        this.innerHTML = isManaging
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Done managing'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Manage facilities';
+        document.getElementById('admin-facilities-page')?.classList.toggle('is-managing-facilities', isManaging);
+    });
+</script>
 @endsection

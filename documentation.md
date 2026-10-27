@@ -20,7 +20,7 @@
 | **Users** | New `position`, `contact_number`, and explicit tracking `last_name` fields. The admin Users page shows the **Admin team**; accounts can be edited or deactivated without deleting their history. | [§7](#7-admin-portal) |
 | **Account rules** | Names allow letters, spaces, hyphens, and apostrophes. Passwords require 8–94 characters, mixed case, and a special character; Argon2id supports the full limit while legacy bcrypt hashes remain verifiable. | [§7](#7-admin-portal) |
 | **Audit trail** | Admin-only search and filters for application changes and login/logout events; sensitive values are redacted. | [controller-documentation.md](controller-documentation.md) |
-| **Reservation hours and WebSockets** | Reservations are restricted to 6:00 AM–7:00 PM. Reverb/Echo broadcasting is configured; existing maintenance conversations still poll. | [fdd.md](fdd.md), [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) |
+| **Reservation hours and WebSockets** | Reservations are restricted to 6:00 AM–7:00 PM. Repair conversations between College and GSU use Reverb/Echo real-time broadcasting with polling as fallback. | [fdd.md](fdd.md), [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) |
 | **Sign-in** | Each landing page card only lets its own accounts in (for example, a college account can't use the Admin card). | [§6.2](#62-login-authloginbladephp) |
 | **Admin booking forms** | Create Direct Reservation and View / Modify now use the same date picker, venue board and equipment tiles as the College/Org request form. The direct reservation page's spacing was polished on Oct 19. | [§7](#7-admin-portal) |
 | **Detail pages** | New request detail and repair ticket detail pages for College, Org and Admin, with a progress tracker. | [§7](#7-admin-portal), [§8](#8-college-staff-portal) |
@@ -131,7 +131,7 @@ Banners use the campus photos in `public/img/facilities/` (Busalian Hall, Paghiu
 | `layouts/partials/notification-bell.blade.php` | Bell icon with an unread-count badge (shows "99+" above 99), highlighted on notification pages, with an accessible label such as "Notifications, 3 unread". |
 | `layouts/partials/request-ticket.blade.php` | Facility request **ticket pop-up**: ticket code, status, venue, date and time. Opens by itself right after submitting (`autoOpen`), or from any `[data-ticket-open]` button. |
 | `layouts/partials/request-detail.blade.php` | Request detail page body for College and Org "My requests": banner, progress tracker, event details, equipment, Cancel (pending only). |
-| `layouts/partials/ticket-detail.blade.php` | Repair & maintenance ticket detail for College and Org, in the same layout as the request detail. |
+| `layouts/partials/ticket-detail.blade.php` | Repair & maintenance ticket detail for College, in the same layout as the request detail. |
 | `layouts/partials/unit-users-index.blade.php`, `unit-users-create.blade.php` | Team list and add/edit form shared by the College and Org **Users** pages. |
 | `layouts/partials/contact-number-input.blade.php` | Contact number field for every add/edit user form: digits only, formatted as `0909-340-9211` while typing. |
 | `admin/bookings/partials/booking-picker-script.blade.php` | Date picker, venue board and equipment tiles script for the admin booking forms. Display only; it never changes what the form sends. |
@@ -463,7 +463,7 @@ The overlap rule is `existing_start < requested_end && existing_end > requested_
 
 The same designs as College Staff, with org-specific details:
 
-- **Dashboard:** organization chip; no "My facilities" tile (org staff have none); a "My repair requests" tile instead.
+- **Dashboard:** organization chip, facility-request totals, and quick access to facility requests and reservations. Organization accounts have no maintenance-ticket access.
 - **New request:** Cancel goes to the org dashboard, as before.
 - **"Who will note it?" (Oct 19): required, and must come from the college side.** Organization requests are noted by a college **Dean** or **Program Head**, whatever the requester's position in the organization (Governor or any other officer). Three cards:
 
@@ -478,7 +478,7 @@ The same designs as College Staff, with org-specific details:
   - The org officer options (President, Adviser, Governor) were removed from this step.
   - The position is saved in the request as `noted_signatory_position` and shown next to the name ("Jose Rizal · OIC Dean") on the request detail page, the ticket pop-up and the admin request page. The printed PDF still shows the name only.
 - **Reservation calendar:** the controller provides bookings grouped by day only, so this page shows reservations, booked days, the busiest day, and a "Booked days" list with a bar per day.
-- **My Reservations, My requests, request detail, ticket pop-up, My repair requests, repair ticket detail, New repair request:** same as College Staff.
+- **My Reservations, My requests, request detail, and ticket pop-up:** shared with College Staff. Repair reporting is available only in the College portal.
 - **Users:** the same team accounts page as College, with **Governor** as the head position ([§8](#team-accounts-users-page)).
 
 ---
@@ -594,7 +594,7 @@ Current verification guidance is in [§16](#16-verification) and [TESTING_GUIDE.
 - `layouts/partials/`: `portal-shell`, `page-kit` (now empty), `notification-bell`, `flash-toast`, `request-ticket`, `request-detail`, `ticket-detail`, `ticket-conversation` (repair chat), `unit-users-index`, `unit-users-create`, `contact-number-input`
 - `public/`: `request-facility`, `request-submitted`, `guest-access`, `rates`, `venue-rates.php` (rates data)
 - `admin/bookings/partials/booking-picker-script`
-- `college|org/users/index`, `college|org/users/create`, `college|org/maintenance-tickets/show`
+- `college|org/users/index`, `college|org/users/create`
 
 **Layouts:** `layouts/app`, `layouts/admin`, `layouts/college`, `layouts/org`, `layouts/guest` (retired), `layouts/partials/sidebar`, `layouts/partials/header`
 
@@ -604,7 +604,7 @@ Current verification guidance is in [§16](#16-verification) and [TESTING_GUIDE.
 
 **College:** `dashboard`, `bookings/calendar`, `bookings/index`, `requests/facilities_index`, `requests/facilities_create`, `requests/facilities_show`, `maintenance-tickets/index`, `maintenance-tickets/create`
 
-**Org:** `dashboard`, `bookings/calendar`, `bookings/index`, `requests/facilities_index`, `requests/facilities_create`, `requests/facilities_show`, `maintenance-tickets/index`, `maintenance-tickets/create`
+**Org:** `dashboard`, `bookings/calendar`, `bookings/index`, `requests/facilities_index`, `requests/facilities_create`, `requests/facilities_show`
 
 **Guest (retired, kept in the codebase):** `dashboard`, `rates`, `bookings/calendar`, `bookings/index`, `requests/facilities_index`, `requests/facilities_create`, `requests/facilities_show`
 

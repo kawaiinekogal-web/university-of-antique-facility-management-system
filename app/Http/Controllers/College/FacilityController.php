@@ -106,19 +106,16 @@ class FacilityController extends Controller
             ->with('status', 'Facility updated successfully.');
     }
 
-    /**
-     * Remove the specified facility from storage.
-     */
-    public function destroy(Facility $facility)
+    public function deactivate(Facility $facility)
     {
         if (! $this->facilityBelongsToCollege($facility, Auth::user()->college_id, Auth::user()->college_name)) {
             abort(403, 'Unauthorized access.');
         }
 
-        $facility->delete();
+        $facility->update(['is_active' => false]);
 
         return redirect()->route('college.facilities.index')
-            ->with('status', 'Facility deleted successfully.');
+            ->with('status', 'Facility deactivated successfully.');
     }
 
     protected function facilityBelongsToCollege(Facility $facility, ?int $collegeId, ?string $collegeName): bool

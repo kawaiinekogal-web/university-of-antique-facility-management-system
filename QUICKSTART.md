@@ -25,13 +25,13 @@ php artisan db:seed
 npm run build
 ```
 
-Start the local server:
+Start the local application services, including Reverb for WebSocket chat:
 
 ```bash
-php artisan serve --host=127.0.0.1 --port=8000
+composer run dev
 ```
 
-Open `http://127.0.0.1:8000`. The homepage exposes the public calendar, guest facility request form, and public status tracker.
+Open the URL printed by Artisan (normally `http://127.0.0.1:8000`). This runs the Laravel server, queue worker, Vite, and Reverb. The homepage exposes the public calendar, guest facility request form, and public status tracker.
 
 ## Roles and test data
 

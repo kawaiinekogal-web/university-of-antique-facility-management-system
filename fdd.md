@@ -7,7 +7,7 @@ The UA Facility Management System is a role-based web application that centraliz
 - Public users (reservation calendar, no-sign-in guest facility requests, and request/booking/maintenance status lookup).
 - GSU admins (full control over facilities, reservations, and users).
 - College staff (manage college facilities and submit reservation requests).
-- Organization staff (submit and track facility utilization and repair/maintenance requests).
+- Organization staff (submit and track facility utilization requests; maintenance reporting is not available in the Organization portal).
 
 This document describes the functional behavior of the system from a user and business perspective, independent of implementation details.
 
@@ -53,8 +53,7 @@ This document describes the functional behavior of the system from a user and bu
 
 ### 2.4 Organization Staff
 
-- Submit facilities utilization requests (for events/activities) and repair/maintenance tickets.
-- View their own repair/maintenance tickets.
+- Submit facilities utilization requests (for events/activities).
 - View and filter their own utilization requests.
 - View their reservations (active / rescheduled).
 - View the read-only reservation calendar of all active reservations; the reservations list remains requester-scoped.

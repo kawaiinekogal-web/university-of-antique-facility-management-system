@@ -149,7 +149,7 @@
                                 <div class="dp-dates is-single">
                                     <div class="pk-field">
                                         <label for="date_activity" class="pk-label">Date of activity <span class="pk-req">*</span></label>
-                                        <input type="date" id="date_activity" name="date_activity" class="pk-input" value="{{ old('date_activity', $currentDate) }}">
+                                        <input type="text" id="date_activity" name="date_activity" class="pk-input" required inputmode="numeric" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" placeholder="YYYY-MM-DD" value="{{ old('date_activity', $currentDate) }}">
                                     </div>
                                 </div>
                                 <div class="dp-times">

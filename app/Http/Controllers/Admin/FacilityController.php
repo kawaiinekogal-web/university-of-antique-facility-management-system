@@ -51,11 +51,19 @@ class FacilityController extends Controller
             ->with('status', 'Facility updated successfully.');
     }
 
-    public function destroy(Facility $facility)
+    public function deactivate(Facility $facility)
     {
-        $facility->delete();
+        $facility->update(['is_active' => false]);
 
         return redirect()->route('admin.facilities.index')
-            ->with('status', 'Facility deleted successfully.');
+            ->with('status', 'Facility deactivated successfully.');
+    }
+
+    public function activate(Facility $facility)
+    {
+        $facility->update(['is_active' => true]);
+
+        return redirect()->route('admin.facilities.index')
+            ->with('status', 'Facility activated successfully.');
     }
 }

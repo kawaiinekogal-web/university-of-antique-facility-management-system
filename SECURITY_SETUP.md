@@ -8,7 +8,7 @@ This document describes the security boundaries relevant to the current Laravel 
 - Role middleware restricts admin, college-staff, and organization-staff routes.
 - Active-account checks prevent deactivated users from continuing to access protected pages.
 - Public routes are intentionally limited to public information and guest workflows. The homepage status tracker does not allow record editing.
-- College maintenance-ticket access is scoped to members of the requester's college; organization users access their own maintenance tickets.
+- College maintenance-ticket access is scoped to members of the requester's college. Organization users do not have maintenance-ticket routes or access.
 
 ## Passwords, forms, and sessions
 

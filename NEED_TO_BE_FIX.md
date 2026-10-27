@@ -247,7 +247,7 @@ Need to Be Fixed – McCall Evaluation
 
 - **No way to reactivate a deactivated account.** Admin, College, and Org user pages only offer _Deactivate_ ; a deactivated account shows a locked "Deactivated" badge and there is no route, button, or is_active field on the edit form to restore it. Add a PATCH /…/users/{user}/reactivate action for each portal. 
 
-- **Org staff cannot message on maintenance tickets.** College staff have a message thread on their tickets (college/maintenance-requests/{ticket}/messages), but the Org portal has no message routes and org/maintenance-tickets/show.blade.php has no thread. Add the same messaging to the Org portal. 
+- **Org maintenance messaging:** Historical audit item; organization maintenance-ticket access and its routes were intentionally removed. Repair conversations remain available to College staff and GSU.
 
 - **Rental fees are not stored anywhere.** The public Venue Rates page and Monthly Records show fees, but the facilities table has no fee column, so the system cannot compute or report rental income (see Accuracy). 
 
@@ -305,9 +305,9 @@ Need to Be Fixed – McCall Evaluation
 
 - **Logout accepts `GET`.** GET|POST logout lets any link or image on another site sign a user out. Allow POST only. 
 
-- **College and Org portals use different URLs for the same page.** The request list is college/requests but org/requests/facilities/index. Use the same pattern in both (e.g. /{portal}/requests for the list and /{portal}/requests/create for the form). 
+- **College and Org portals use different URLs for the same page.** The request list is college/requests but org/requests/facilities/index. This historical URL consistency item remains separate from the intentional removal of Org maintenance access.
 
-- **Maintenance URLs do not match their names.** College and Org use .../maintenance-requests while the route names and the Admin URL use maintenance-tickets. Pick one term. 
+- **Maintenance URLs do not match their names.** College uses .../maintenance-requests while route names and Admin use maintenance-tickets. Organization maintenance routes were removed, so this historical mismatch applies only to the College route.
 
 ### **JSON responses and data formats** 
 
@@ -335,7 +335,7 @@ Need to Be Fixed – McCall Evaluation
 
 - **The facility request form exists 4 times (3,348 lines).** college/requests/facilities_create (858), org/requests/facilities_create (842, **92% identical** to College), guest/requests/facilities_create (798), and public/request-facility (850, 64% identical). Make one shared form partial with small perportal options. 
 
-- **College and Org pages are near copies.** Measured similarity: request list 94%, My Reservations 95%, maintenance list 88%, maintenance create 86%, dashboard 71%. Move each pair into one shared view in resources/views/partials (like public.calendar already is). 
+- **College and Org pages are near copies.** Historical measurements included maintenance pages which are no longer available to Org users; compare only currently available pages before acting on this audit item.
 
 - **College and Org controllers repeat logic.** BookingController (121 / 109 lines, only 35 differing lines), FormController (235 / 193), MaintenanceTicketController (123 / 84). Move the shared parts into traits or a base controller, as already done for users and ticket messages. 
 
@@ -383,7 +383,7 @@ Need to Be Fixed – McCall Evaluation
 
 **Navigation (must match across portals – see CLAUDE.md)** 
 
-- **Org portal has no "Repair & maintenance" link.** The pages exist (org/maintenance-requests) but layouts/org.blade.php does not list them, so Org staff cannot reach them from the sidebar. Add the link as in layouts/college.blade.php. 
+- **Org maintenance access:** Intentionally removed. Organization accounts should not have maintenance-ticket routes or reporting pages.
 
 - **College portal has no facilities link.** College facility management (college/facilities) is reachable only from a dashboard card. Add a "My facilities" sidebar link. 
 
@@ -665,7 +665,7 @@ Need to Be Fixed – McCall Evaluation
 
 ### **Needs to fix** 
 
-- **No user manual.** All documentation (QUICKSTART.md, TESTING_GUIDE.md, documentation.md, …) is for developers (server setup, test accounts, code). Write a short user guide per role (Admin, College staff, Org staff, Guest) with screenshots: how to request a facility, track it, cancel it, file a repair ticket, approve or disapprove requests, and create direct reservations. 
+- **No user manual.** All documentation (QUICKSTART.md, TESTING_GUIDE.md, documentation.md, …) is for developers (server setup, test accounts, code). Write a short user guide per role (Admin, College staff, Org staff, Guest) with screenshots: how to request a facility, track it, cancel it, file a repair ticket (College staff only), approve or disapprove requests, and create direct reservations.
 
 - **No in-app help.** There is no /help route, FAQ, or "?" link anywhere in the portals. Add a Help item to the shared sidebar (all portals) linking to the user guide and an FAQ (e.g. "Why can't I pick a date within 30 days?", "What does Pending payment mean?"). 
 

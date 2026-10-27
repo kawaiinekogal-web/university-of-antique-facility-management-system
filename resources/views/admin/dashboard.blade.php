@@ -12,7 +12,7 @@
 <div class="dash">
 
   {{-- Welcome banner --}}
-  <section class="dash-hero">
+  <section class="dash-hero" style="--dash-hero-image: url('{{ asset('img/facilities/busalian-hall.jpg') }}')">
     <div>
       <p class="dash-hero-date">{{ $now->format('l, F j, Y') }}</p>
       <h1>{{ $greeting }}, {{ $adminName }}</h1>

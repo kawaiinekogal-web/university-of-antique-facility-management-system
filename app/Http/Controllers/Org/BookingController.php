@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\GroupsBookingsByDay;
 use App\Models\Booking;
 use App\Models\Facility;
+use App\Services\ReservationCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -65,19 +66,10 @@ class BookingController extends Controller
         return view('org.bookings.index', compact('bookings', 'facilities'));
     }
 
-    public function calendar(Request $request)
+    public function calendar(Request $request, ReservationCalendarService $calendar)
     {
         $current = $this->resolveMonth($request);
-        $start   = $current->copy()->startOfMonth();
-        $end     = $current->copy()->endOfMonth();
-
-        // Same behavior as public/admin/college calendars:
-        // load only active bookings (reserved / rescheduled) for the month.
-        $bookings = Booking::with('facilities')
-            ->whereBetween('start_time', [$start, $end])
-            ->whereIn('status', ['reserved', 'rescheduled'])
-            ->orderBy('start_time')
-            ->get();
+        $bookings = $calendar->bookingsForMonth($current);
 
         $days = $this->groupByDay($bookings);
 
@@ -105,5 +97,4 @@ class BookingController extends Controller
         ]);
     }
 }
-
 

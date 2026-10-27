@@ -11,7 +11,7 @@
     ];
 @endphp
 
-<div class="pk-page">
+<div class="pk-page" id="admin-users-page">
     <section class="pk-hero" style="--pk-img: url('{{ asset('img/facilities/busalian-hall.jpg') }}')">
         <div>
             <p class="pk-eyebrow">
@@ -66,21 +66,27 @@
 
     <div class="pk-section-head">
         <h2 class="pk-section-title">All users</h2>
-        @if ($users->count() > 0)
-            <span class="pk-section-meta">Showing {{ $users->firstItem() }}–{{ $users->lastItem() }} of {{ $users->total() }}</span>
-        @endif
+        <div class="u-row-8">
+            @if ($users->count() > 0)
+                <span class="pk-section-meta">Showing {{ $users->firstItem() }}–{{ $users->lastItem() }} of {{ $users->total() }}</span>
+            @endif
+            <button type="button" class="pk-btn-outline" id="manage-users-toggle" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                Manage users
+            </button>
+        </div>
     </div>
 
     @if($users->count() > 0)
         <div class="pk-table-wrap">
-            <table class="pk-table">
+            <table class="pk-table usr-table" id="admin-users-table">
                 <thead>
                     <tr>
                         <th>User</th>
                         <th>Role</th>
                         <th>Unit</th>
                         <th>Created</th>
-                        <th><span class="pk-sr">Actions</span></th>
+                        <th class="usr-action-cell"><span class="pk-sr">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -121,7 +127,7 @@
                             </td>
                             <td><span class="usr-unit {{ $unit ? '' : 'is-empty' }}">{{ $unit ?? '-' }}</span></td>
                             <td class="pk-nowrap">{{ $user->created_at?->format('M d, Y') ?? '-' }}</td>
-                            <td>
+                            <td class="usr-action-cell">
                                 <span class="usr-actions">
                                     <a href="{{ route('admin.users.edit', $user) }}" class="usr-btn" aria-label="Edit {{ $user->name }}">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
@@ -204,6 +210,8 @@
 </dialog>
 
 <style>
+    .usr-table:not(.is-managing) .usr-action-cell { display: none; }
+    #admin-users-page:not(.is-managing-users) .adt-edit { display: none; }
     .usr-actions { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; white-space: nowrap; }
     .usr-deactivate { margin: 0; }
     .usr-status { display: inline-block; margin-top: 4px; padding: 2px 7px; border-radius: 999px; background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; }
@@ -267,6 +275,19 @@
 
 <script>
 (function () {
+    const manageUsers = document.getElementById('manage-users-toggle');
+    const usersPage = document.getElementById('admin-users-page');
+    const usersTable = document.getElementById('admin-users-table');
+    manageUsers?.addEventListener('click', function () {
+        const isManaging = this.getAttribute('aria-pressed') !== 'true';
+        this.setAttribute('aria-pressed', String(isManaging));
+        this.innerHTML = isManaging
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Done managing'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Manage users';
+        usersPage?.classList.toggle('is-managing-users', isManaging);
+        usersTable?.classList.toggle('is-managing', isManaging);
+    });
+
     const modal = document.getElementById('deactivate-modal');
     if (!modal) return;
     const $ = (id) => document.getElementById(id);

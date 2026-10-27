@@ -12,7 +12,7 @@
 @endphp
 
 <div class="records-page">
-    <section class="records-hero">
+    <section class="records-hero" style="--records-hero-image: url('{{ asset('img/facilities/paghiusa-hall.jpg') }}')">
         <div>
             <p class="records-eyebrow">Monthly Records</p>
             <div class="records-period">

@@ -33,6 +33,9 @@ Route::middleware(['auth'])->group(function () {
 // home route for viewer/general
 Route::get('/', [\App\Http\Controllers\PublicCalendarController::class, 'index'])
     ->name('home');
+Route::get('/calendar/data', [\App\Http\Controllers\PublicCalendarController::class, 'calendarData'])
+    ->middleware('throttle:120,1')
+    ->name('calendar.data');
 
 // Landing page "Track a request": look up a facility ticket by its FM code + last name (read-only, rate-limited)
 Route::get('/track/ticket', [\App\Http\Controllers\TicketLookupController::class, 'show'])
@@ -102,7 +105,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/facilities', [AdminFacilityController::class, 'store'])->name('admin.facilities.store');
     Route::get('/admin/facilities/{facility}/edit', [AdminFacilityController::class, 'edit'])->name('admin.facilities.edit');
     Route::put('/admin/facilities/{facility}', [AdminFacilityController::class, 'update'])->name('admin.facilities.update');
-    Route::delete('/admin/facilities/{facility}', [AdminFacilityController::class, 'destroy'])->name('admin.facilities.destroy');
+    Route::patch('/admin/facilities/{facility}/deactivate', [AdminFacilityController::class, 'deactivate'])->name('admin.facilities.deactivate');
+    Route::patch('/admin/facilities/{facility}/activate', [AdminFacilityController::class, 'activate'])->name('admin.facilities.activate');
 
     // GSU Forms (accessible by admin/GSU staff)
     Route::get('/forms/facilities', [GsuFormController::class, 'showFacilities'])->name('forms.facilities.show');
@@ -189,7 +193,7 @@ Route::middleware(['auth', 'role:college_staff'])->group(function () {
     Route::post('/college/facilities', [CollegeFacilityController::class, 'store'])->name('college.facilities.store');
     Route::get('/college/facilities/{facility}/edit', [CollegeFacilityController::class, 'edit'])->name('college.facilities.edit');
     Route::put('/college/facilities/{facility}', [CollegeFacilityController::class, 'update'])->name('college.facilities.update');
-    Route::delete('/college/facilities/{facility}', [CollegeFacilityController::class, 'destroy'])->name('college.facilities.destroy');
+    Route::patch('/college/facilities/{facility}/deactivate', [CollegeFacilityController::class, 'deactivate'])->name('college.facilities.deactivate');
 
     // Bookings list (now routed through controller)
     Route::get(
@@ -240,16 +244,6 @@ Route::middleware(['auth', 'role:org_staff'])->group(function () {
         ->name('org.bookings.index');
     Route::get('/org/calendar', [\App\Http\Controllers\Org\BookingController::class, 'calendar'])
         ->name('org.bookings.calendar');
-
-    // Org Maintenance Requests
-    Route::get('/org/maintenance-requests', [\App\Http\Controllers\Org\MaintenanceTicketController::class, 'index'])
-        ->name('org.maintenance-tickets.index');
-    Route::get('/org/maintenance-requests/create', [\App\Http\Controllers\Org\MaintenanceTicketController::class, 'create'])
-        ->name('org.maintenance-tickets.create');
-    Route::post('/org/maintenance-requests', [\App\Http\Controllers\Org\MaintenanceTicketController::class, 'store'])
-        ->name('org.maintenance-tickets.store');
-    Route::get('/org/maintenance-requests/{ticket}', [\App\Http\Controllers\Org\MaintenanceTicketController::class, 'show'])
-        ->name('org.maintenance-tickets.show');
 
     // Facilities Utilization Form (Org → GSU)
     Route::get('/org/requests/facilities', [OrgFormController::class, 'createFacilities'])

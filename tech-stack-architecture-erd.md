@@ -188,7 +188,7 @@ The organization WebView client is archived under `legacy/android/`; its token-b
 │  │  │                                                     │   │  │
 │  │  │  Admin\                                              │   │  │
 │  │  │    DashboardController    →  Admin dashboard          │   │  │
-│  │  │    FacilityController     →  CRUD facilities          │   │  │
+│  │  │    FacilityController     →  Manage facilities         │   │  │
 │  │  │    BookingController      →  Manage bookings          │   │  │
 │  │  │    FormSubmissionController → Review requests         │   │  │
 │  │  │    MaintenanceTicketController → Update tickets       │   │  │
@@ -315,7 +315,7 @@ College/Org Staff                         Admin (GSU)
 
 ### Public Status Lookup Flow
 
-The homepage (`GET /`) renders the public calendar and tracker. The tracker calls the rate-limited `GET /track/ticket` endpoint with a record type, tracking code, and submitter last name; authentication is not required.
+The homepage (`GET /`) renders the public calendar and tracker. The portal calendars and reservation date pickers share the rate-limited `GET /calendar/data` month endpoint, backed by `ReservationCalendarService`; requester details are limited to staff roles. The tracker calls the rate-limited `GET /track/ticket` endpoint with a record type, tracking code, and submitter last name; authentication is not required.
 
 | Type | Record source | Code | Status/details returned |
 |---|---|---|---|

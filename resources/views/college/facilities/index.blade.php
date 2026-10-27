@@ -60,11 +60,15 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <a href="{{ route('college.facilities.edit', $facility) }}" class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
-                                <form action="{{ route('college.facilities.destroy', $facility) }}" method="POST" class="inline" data-confirm="Are you sure you want to delete this facility?" data-confirm-title="Delete facility?" data-confirm-action="Delete facility" data-confirm-tone="danger">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
-                                </form>
+                                @if($facility->is_active)
+                                    <form action="{{ route('college.facilities.deactivate', $facility) }}" method="POST" class="inline" data-confirm="Deactivate {{ $facility->name }}?" data-confirm-title="Deactivate facility?" data-confirm-action="Deactivate facility" data-confirm-tone="danger">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="fac-action-btn is-danger" aria-label="Deactivate {{ $facility->name }}" title="Deactivate facility">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

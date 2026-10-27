@@ -68,7 +68,7 @@ Run the Reverb server under Supervisor or systemd, binding it to loopback behind
 php artisan reverb:start --host=127.0.0.1 --port=8080
 ```
 
-Configure Nginx/Apache to proxy WebSocket upgrades from the public WSS endpoint to that process. Keep the Reverb app secret private and allow the configured public WebSocket port through the firewall only where required. Developers can start Reverb alongside the other local services with `composer run dev`. Broadcasting infrastructure is enabled; current maintenance conversations continue polling and are not yet broadcast events.
+Configure Nginx/Apache to proxy WebSocket upgrades from the public WSS endpoint to that process. Keep the Reverb app secret private and allow the configured public WebSocket port through the firewall only where required. Developers can start Reverb alongside the other local services with `composer run dev`. Repair-ticket messages are broadcast to authorized private channels; the conversation UI retains polling as a fallback when a WebSocket connection is unavailable.
 
 ## Audit trail
 

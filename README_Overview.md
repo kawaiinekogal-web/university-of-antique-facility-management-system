@@ -7,7 +7,7 @@ The University of Antique Facility Management System is a Laravel web applicatio
 - **Public visitors and guests:** view the public calendar, submit facility requests without an account, and track facility requests, bookings, or repair tickets without signing in.
 - **GSU administrators:** manage facilities and users, review requests, manage reservations, and update maintenance tickets.
 - **College staff:** manage eligible college facilities, submit utilization and repair requests, and follow their unit's activity.
-- **Organization staff:** submit utilization and repair requests and view their own requests and reservations.
+- **Organization staff:** submit utilization requests and view their own requests and reservations.
 
 ## Important workflows
 

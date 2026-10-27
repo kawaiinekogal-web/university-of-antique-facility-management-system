@@ -14,8 +14,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // College records are required for the college staff accounts.
+        // These base records are required by the staff accounts and reservation forms.
         $this->call(CollegeSeeder::class);
+        $this->call(FacilitySeeder::class);
+        $this->call(SignatorySeeder::class);
         $this->call(SampleUsersSeeder::class);
+        $this->call(GuestUserSeeder::class);
     }
 }

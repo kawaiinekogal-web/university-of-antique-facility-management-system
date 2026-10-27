@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\GroupsBookingsByDay;
 use App\Models\Booking;
 use App\Models\Facility;
+use App\Services\ReservationCalendarService;
 use App\Models\Notification;
 use App\Rules\OperatingHours;
 use App\Services\AuditLogService;
@@ -127,18 +128,12 @@ class BookingController extends Controller
     /**
      * Month calendar view for admin: shows bookings per day and facility counts.
      */
-    public function calendar(Request $request)
+    public function calendar(Request $request, ReservationCalendarService $calendar)
     {
         $current = $this->resolveMonth($request);
-
+        $bookings = $calendar->bookingsForMonth($current, true);
         $start = $current->copy()->startOfMonth();
-        $end   = $current->copy()->endOfMonth();
-
-        $bookings = Booking::with(['facilities', 'requester'])
-            ->whereBetween('start_time', [$start, $end])
-            ->whereIn('status', ['reserved', 'rescheduled'])
-            ->orderBy('start_time')
-            ->get();
+        $end = $current->copy()->endOfMonth();
 
         $days = $this->groupByDay($bookings);
 

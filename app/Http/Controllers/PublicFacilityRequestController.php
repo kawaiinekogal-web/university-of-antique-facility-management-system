@@ -31,7 +31,6 @@ class PublicFacilityRequestController extends Controller
     public function create()
     {
         $coreFacilities = Facility::where('is_active', true)
-            ->whereNull('college_id')
             ->orderBy('name')
             ->get();
 

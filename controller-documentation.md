@@ -34,7 +34,10 @@
 | `store(StoreFacilityRequest $request)` | POST | `/admin/facilities` | Validates and creates a new facility. Fields: `name`, `location`, `owner_type` (gsu/college/org), `owner_college`, `description`, `is_active`, `availability_status` (available/unavailable/maintenance). Redirects with success message. |
 | `edit(Facility $facility)` | GET | `/admin/facilities/{facility}/edit` | Renders the edit form for a specific facility. |
 | `update(StoreFacilityRequest $request, Facility $facility)` | PUT | `/admin/facilities/{facility}` | Validates and updates a facility. Protects core seeded facilities from having their `owner_type`/`owner_college` changed. Prevents admin from changing `availability_status` on college-owned facilities. |
-| `destroy(Facility $facility)` | DELETE | `/admin/facilities/{facility}` | Deletes the specified facility. |
+| `deactivate(Facility $facility)` | PATCH | `/admin/facilities/{facility}/deactivate` | Sets `is_active=false`, preserving the facility and its reservation history. |
+| `activate(Facility $facility)` | PATCH | `/admin/facilities/{facility}/activate` | Sets `is_active=true` to restore a previously deactivated facility. |
+
+The facilities list hides edit and activation controls until **Manage facilities** is selected. Actions use icons with accessible labels.
 
 ---
 
@@ -117,6 +120,7 @@ The former `Admin\FormReviewController` reference is retired: it is not part of 
 | Method | HTTP | Route | Description |
 |---|---|---|---|
 | `index(Request $request)` | GET | `/` (home) | Public-facing month calendar. Accepts optional `?month=YYYY-MM`. Shows all approved/rescheduled bookings grouped by day. No authentication required. |
+| `calendarData(Request $request, ReservationCalendarService $calendar)` | GET | `/calendar/data` (`calendar.data`) | Rate-limited shared JSON month data for reservation pickers and portal calendars. Event and requester-unit details are included only for staff roles. |
 
 ---
 
@@ -149,7 +153,7 @@ The former `Admin\FormReviewController` reference is retired: it is not part of 
 | `store(Request $request)` | POST | `/college/facilities` | Creates a new college-owned facility. Validates name, location, description, is_active, availability_status. Forces `owner_type=college`, sets `is_active=false` and `availability_status=unavailable` (new college facilities require GSU verification before activation). |
 | `edit(Facility $facility)` | GET | `/college/facilities/{facility}/edit` | Renders the edit form. Aborts 403 if the facility doesn't belong to the user's college. |
 | `update(Request $request, Facility $facility)` | PUT | `/college/facilities/{facility}` | Updates a college-owned facility. Aborts 403 if ownership doesn't match. |
-| `destroy(Facility $facility)` | DELETE | `/college/facilities/{facility}` | Deletes a college-owned facility. Aborts 403 if ownership doesn't match. |
+| `deactivate(Facility $facility)` | PATCH | `/college/facilities/{facility}/deactivate` | Deactivates a college-owned facility without deleting it. Aborts 403 if ownership doesn't match. |
 
 ---
 
@@ -277,12 +281,4 @@ Downloads are private and non-cacheable. New uploads use the private `payment_re
 | `messages(Request $request, MaintenanceTicket $ticket)` | GET | `/college/maintenance-requests/{ticket}/messages` | Returns new college-team conversation messages as JSON. |
 | `sendMessage(Request $request, MaintenanceTicket $ticket)` | POST | `/college/maintenance-requests/{ticket}/messages` | Adds a message and notifies GSU and other college-team members; limited to 30 requests per minute. Closed-ticket conversations are read-only. |
 
-## 22. `Org\MaintenanceTicketController`
-**File:** `app/Http/Controllers/Org/MaintenanceTicketController.php`
-
-| Method | HTTP | Route | Description |
-|---|---|---|---|
-| `index()` | GET | `/org/maintenance-requests` | Lists the authenticated organization's own maintenance tickets. |
-| `create()` | GET | `/org/maintenance-requests/create` | Displays the new repair request form. |
-| `store(Request $request)` | POST | `/org/maintenance-requests` | Requires the account's explicit tracking last name and validates the active facility, subject, and issue description. Creates an `RM-…` ticket and notifies the requester and admins. |
-| `show(MaintenanceTicket $ticket)` | GET | `/org/maintenance-requests/{ticket}` | Shows a ticket only to its requester. Organization tickets do not use the college-team conversation feature. |
+Organization accounts do not have maintenance-ticket routes or a maintenance-reporting interface.

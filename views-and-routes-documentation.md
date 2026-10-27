@@ -30,6 +30,7 @@ Routes are defined in `routes/web.php`. Staff routes use session authentication 
 | Method | URI | Route Name | Controller | Description |
 |---|---|---|---|---|
 | GET | `/` | `home` | `PublicCalendarController@index` | Public facility schedule calendar (homepage) |
+| GET | `/calendar/data` | `calendar.data` | `PublicCalendarController@calendarData` | Rate-limited JSON month data shared by reservation pickers and portal calendars; event details are included only for staff roles |
 | GET | `/track/ticket` | `ticket.lookup` | `TicketLookupController@show` | Rate-limited public status lookup for FM, BK/BKG and RM records; requires tracking code and submitter last name |
 | GET | `/request-facility` | `public.request.create` | `PublicFacilityRequestController@create` | Public guest facility request form; no sign-in |
 | POST | `/request-facility` | `public.request.store` | `PublicFacilityRequestController@store` | Validates and stores a guest request with a separately entered tracking last name; rate-limited |
@@ -67,12 +68,8 @@ Staff ticket routes are protected by `auth` and the corresponding role middlewar
 | GET | `/college/maintenance-requests/{ticket}` | `college.maintenance-tickets.show` | View a ticket from the user's college team |
 | GET | `/college/maintenance-requests/{ticket}/messages` | `college.maintenance-tickets.messages` | Fetch conversation updates |
 | POST | `/college/maintenance-requests/{ticket}/messages` | `college.maintenance-tickets.messages.store` | Send a message; throttled |
-| GET | `/org/maintenance-requests` | `org.maintenance-tickets.index` | List tickets submitted by the signed-in organization user |
-| GET | `/org/maintenance-requests/create` | `org.maintenance-tickets.create` | New organization repair request form |
-| POST | `/org/maintenance-requests` | `org.maintenance-tickets.store` | Submit a ticket; requires account tracking last name |
-| GET | `/org/maintenance-requests/{ticket}` | `org.maintenance-tickets.show` | View the signed-in user's ticket |
 
-College tickets are shared within the college and have a conversation with GSU. Organization tickets are requester-scoped and do not use the college conversation routes.
+College tickets are shared within the college and have a conversation with GSU. Organization accounts do not have maintenance-ticket routes or portal access.
 
 ### Admin Routes (`auth` + `role:admin`)
 
@@ -89,7 +86,8 @@ College tickets are shared within the college and have a conversation with GSU. 
 | POST | `/admin/facilities` | `admin.facilities.store` | `Admin\FacilityController@store` | Store new facility |
 | GET | `/admin/facilities/{facility}/edit` | `admin.facilities.edit` | `Admin\FacilityController@edit` | Show edit facility form |
 | PUT | `/admin/facilities/{facility}` | `admin.facilities.update` | `Admin\FacilityController@update` | Update facility |
-| DELETE | `/admin/facilities/{facility}` | `admin.facilities.destroy` | `Admin\FacilityController@destroy` | Delete facility |
+| PATCH | `/admin/facilities/{facility}/deactivate` | `admin.facilities.deactivate` | `Admin\FacilityController@deactivate` | Deactivate facility without deleting it |
+| PATCH | `/admin/facilities/{facility}/activate` | `admin.facilities.activate` | `Admin\FacilityController@activate` | Reactivate a facility |
 
 #### GSU PDF Forms
 | Method | URI | Route Name | Controller | Description |
@@ -149,7 +147,7 @@ College tickets are shared within the college and have a conversation with GSU. 
 | POST | `/college/facilities` | `college.facilities.store` | `College\FacilityController@store` | Store new college facility |
 | GET | `/college/facilities/{facility}/edit` | `college.facilities.edit` | `College\FacilityController@edit` | Show edit facility form |
 | PUT | `/college/facilities/{facility}` | `college.facilities.update` | `College\FacilityController@update` | Update college facility |
-| DELETE | `/college/facilities/{facility}` | `college.facilities.destroy` | `College\FacilityController@destroy` | Delete college facility |
+| PATCH | `/college/facilities/{facility}/deactivate` | `college.facilities.deactivate` | `College\FacilityController@deactivate` | Deactivate an owned facility without deleting it |
 
 #### Bookings
 | Method | URI | Route Name | Controller | Description |
@@ -173,17 +171,13 @@ College tickets are shared within the college and have a conversation with GSU. 
 | GET | `/org/dashboard` | `org.dashboard` | `Org\DashboardController@index` | Organization staff dashboard |
 | GET | `/org/bookings` | `org.bookings.index` | `Org\BookingController@index` | List own reservations with filters |
 | GET | `/org/calendar` | `org.bookings.calendar` | `Org\BookingController@calendar` | View the organization reservation calendar |
-| GET | `/org/maintenance-requests` | `org.maintenance-tickets.index` | `Org\MaintenanceTicketController@index` | List the signed-in user's maintenance tickets |
-| GET | `/org/maintenance-requests/create` | `org.maintenance-tickets.create` | `Org\MaintenanceTicketController@create` | Show the maintenance request form |
-| POST | `/org/maintenance-requests` | `org.maintenance-tickets.store` | `Org\MaintenanceTicketController@store` | Submit a maintenance ticket |
-| GET | `/org/maintenance-requests/{ticket}` | `org.maintenance-tickets.show` | `Org\MaintenanceTicketController@show` | View the requester's maintenance ticket |
 | GET | `/org/requests/facilities` | `org.requests.facilities.create` | `Org\FormController@createFacilities` | Show new request form |
 | POST | `/org/requests/facilities` | `org.requests.facilities.store` | `Org\FormController@storeFacilities` | Submit new request |
 | GET | `/org/requests/facilities/index` | `org.requests.facilities.index` | `Org\FormController@indexFacilities` | List the user's facility utilization requests |
 | GET | `/org/requests/facilities/{submission}` | `org.requests.facilities.show` | `Org\FormController@showFacilities` | View a single request |
 | POST | `/org/requests/facilities/{submission}/cancel` | `org.requests.facilities.cancel` | `Org\FormController@cancelFacilities` | Cancel an eligible request |
 
-College and organization staff also have role-scoped team user routes at `/college/users...` and `/org/users...`, including create, edit, update, and deactivate actions. Deactivation preserves account history.
+College and organization staff also have role-scoped team user routes at `/college/users...` and `/org/users...`, including create, edit, update, and deactivate actions. Deactivation preserves account history. Organization users do not have maintenance-ticket routes or portal access.
 
 ### GSU High-priority Direct Booking Routes (Admin)
 
@@ -791,11 +785,8 @@ Paginated table of the organization staff user's own facility utilization reques
 | `college/maintenance-tickets/index.blade.php` | Tickets submitted across the signed-in user's college team |
 | `college/maintenance-tickets/create.blade.php` | New repair ticket form, including an unlisted “Others” location |
 | `college/maintenance-tickets/show.blade.php` | Ticket detail, progress, and live college-to-GSU conversation |
-| `org/maintenance-tickets/index.blade.php` | Tickets submitted by the signed-in organization user |
-| `org/maintenance-tickets/create.blade.php` | New organization repair ticket form |
-| `org/maintenance-tickets/show.blade.php` | Requester-scoped organization ticket detail |
 
-New tickets require the account's explicit tracking last name for public status lookup. Ticket codes use the `RM-…` format; organization tickets do not have the college conversation feature.
+College repair tickets require the account's explicit tracking last name for public status lookup. Ticket codes use the `RM-…` format.
 
 ## GSU PDF Form Views
 

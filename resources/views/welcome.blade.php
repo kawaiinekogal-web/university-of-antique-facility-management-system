@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </section>
 
 {{-- TICKET TRACKER --}}
-<section class="ua-track-section" id="track" aria-labelledby="ua-track-title">
+<section class="ua-track-section" id="track" aria-labelledby="ua-track-title" style="--ua-track-image: url('{{ asset('img/facilities/tiripunan-hall.jpg') }}')">
   <div class="ua-track-inner">
     <div class="ua-track-copy">
       <h2 id="ua-track-title">Track a request or booking</h2>

@@ -1083,7 +1083,7 @@ html:has(.ua-landing) { scroll-behavior: smooth; scroll-padding-top: 76px; }
 
 /* ── LANDING: ticket tracker ── */
 .ua-track-section { position: relative; isolation: isolate; overflow: hidden; margin: 0; padding: var(--ua-section-y) var(--ua-gutter); background: var(--ua-ink); color: #fff; font-family: var(--sans); }
-.ua-track-section::before { content: ""; position: absolute; inset: 0; z-index: -2; background: url('/img/facilities/tiripunan-hall.jpg') center 45% / cover no-repeat; filter: grayscale(100%); }
+.ua-track-section::before { content: ""; position: absolute; inset: 0; z-index: -2; background: var(--ua-track-image) center 45% / cover no-repeat; filter: grayscale(100%); }
 .ua-track-section::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(80% 120% at 0% 0%, rgba(148,163,184,.26) 0%, rgba(148,163,184,0) 60%), linear-gradient(110deg, rgba(15,23,42,.97) 0%, rgba(51,65,85,.9) 55%, rgba(10,10,10,.82) 100%); }
 .ua-track-inner { max-width: 920px; margin: 0 auto; text-align: center; }
 .ua-track-copy .ua-track-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.7); }
@@ -2222,7 +2222,7 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: url('/img/facilities/busalian-hall.jpg') center 40% / cover no-repeat;
+  background: var(--dash-hero-image) center 40% / cover no-repeat;
   filter: grayscale(100%);
 }
 .dash-hero::after {
@@ -2554,14 +2554,22 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 .fac-loc svg { width: 14px; height: 14px; flex-shrink: 0; }
 .fac-desc { margin: 4px 0 0; font-size: 13px; line-height: 1.55; color: #475569; }
 .fac-desc.is-empty { color: #94A3B8; font-style: italic; }
-.fac-actions { display: flex; align-items: center; gap: 8px; padding: 12px 18px 16px; }
+.fac-actions { display: none; align-items: center; gap: 8px; padding: 12px 18px 16px; }
+.fac-page.is-managing-facilities .fac-actions { display: flex; }
 .fac-actions form { margin: 0; }
-.fac-delete {
-    display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid transparent;
-    background: transparent; color: #B91C1C; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background .18s ease, border-color .18s ease;
+.fac-action-btn {
+    display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border-radius: 9px;
+    border: 1px solid #E2E8F0; background: #fff; color: #334155; cursor: pointer; text-decoration: none;
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
 }
-.fac-delete svg { width: 14px; height: 14px; }
-.fac-delete:hover { background: #FEF2F2; border-color: #FECACA; }
+.fac-action-btn svg { width: 15px; height: 15px; }
+.fac-action-btn:hover { background: #F8FAFC; border-color: #94A3B8; }
+.fac-action-btn:focus-visible { outline: 2px solid #64748B; outline-offset: 2px; }
+.fac-action-btn.is-danger { border-color: #FECACA; color: #B91C1C; }
+.fac-action-btn.is-danger:hover { background: #FEF2F2; border-color: #B91C1C; }
+.fac-action-btn.is-activate { border-color: #A7F3D0; color: #047857; }
+.fac-action-btn.is-activate:hover { background: #ECFDF5; border-color: #047857; }
+.fac-deactivated { position: absolute; top: 12px; right: 12px; z-index: 1; background: rgba(248, 250, 252, .95); color: #475569; }
 .fac-inactive { opacity: .72; }
 
 /* ── admin/forms/facilities_index.blade.php ── */
@@ -2606,7 +2614,7 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
     }
     .records-hero::before {
         content: ""; position: absolute; inset: 0; z-index: -2;
-        background: url('/img/facilities/paghiusa-hall.jpg') center 35% / cover no-repeat;
+        background: var(--records-hero-image) center 35% / cover no-repeat;
         filter: grayscale(100%);
     }
     .records-hero::after {
@@ -2935,7 +2943,7 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: url('/img/facilities/grand-stand.jpg') center / cover no-repeat;
+  background: var(--login-hero-image) center / cover no-repeat;
   filter: grayscale(100%) contrast(1.05);
   transform: scale(1.03); /* hides blurred/soft edges */
 }
@@ -3538,6 +3546,18 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 .dp-fields { display: flex; flex-direction: column; gap: 12px; }
 .dp-dates, .dp-times { gap: 10px; }
 .dp-side .pk-input { height: 40px; padding: 0 10px; font-size: 13.5px; }
+.dp-side .pk-label[for="date_activity"]::before,
+.dp-side .pk-label[for="date_end"]::before {
+  content: "";
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin-right: 6px;
+  vertical-align: -3px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M16 3v4M8 3v4M3 10h18'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M16 3v4M8 3v4M3 10h18'/%3E%3C/svg%3E") center / contain no-repeat;
+}
 .dp-side .pk-help { margin: -2px 0 0; font-size: 12px; line-height: 1.45; }
 @container (min-width: 460px) {
     .dp-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 12px; align-items: end; }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\GroupsBookingsByDay;
 use App\Models\Booking;
 use App\Models\Facility;
+use App\Services\ReservationCalendarService;
 use Illuminate\Http\Request;
 
 class BookingController extends Controller
@@ -22,17 +23,10 @@ class BookingController extends Controller
         return view('guest.bookings.index', compact('bookings'));
     }
 
-    public function calendar(Request $request)
+    public function calendar(Request $request, ReservationCalendarService $calendar)
     {
         $current = $this->resolveMonth($request);
-        $start = $current->copy()->startOfMonth();
-        $end = $current->copy()->endOfMonth();
-
-        $bookings = Booking::with('facilities')
-            ->whereBetween('start_time', [$start, $end])
-            ->whereIn('status', ['reserved', 'rescheduled'])
-            ->orderBy('start_time')
-            ->get();
+        $bookings = $calendar->bookingsForMonth($current);
 
         $days = $this->groupByDay($bookings);
 

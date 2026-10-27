@@ -8,6 +8,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&family=Inter:wght@400;500;600;700&family=Merriweather:wght@700;900&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&family=Inter:wght@400;500;600;700&family=Merriweather:wght@700;900&display=swap"></noscript>
+    <script>
+        window.loadReservationCalendarMonth = (url, month) => {
+            if (window.ReservationCalendar) {
+                return window.ReservationCalendar.loadMonth(url, month);
+            }
+
+            return new Promise((resolve, reject) => {
+                window.addEventListener('reservation-calendar:ready', () => {
+                    window.ReservationCalendar.loadMonth(url, month).then(resolve, reject);
+                }, { once: true });
+            });
+        };
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-white text-black antialiased">

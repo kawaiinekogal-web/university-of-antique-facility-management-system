@@ -6,13 +6,13 @@ A role-based web application for facility requests and reservations, maintenance
 
 - Public reservation calendar and status tracker for facility requests (`FM`), bookings (`BKG`), and repair/maintenance tickets (`RM`).
 - Guest facility requests without account creation or sign-in.
-- College and organization-unit portals for facility requests and maintenance reporting.
+- College portal for facility requests and repair/maintenance reporting; organization-unit portal for facility requests.
 - GSU administration for facilities, request approvals, reservations, users, and maintenance ticket updates.
 - Staff accounts can be deactivated without deleting their request and reservation history.
 - Account names allow letters, spaces, hyphens, and apostrophes. New passwords require 8–94 characters, uppercase and lowercase letters, and a special character.
 - Reservations are limited to 6:00 AM–7:00 PM. Public guest venue choices display the current published rate.
 - Admins can search a read-only audit trail of account, reservation, facility, request, and maintenance changes.
-- Laravel Reverb and Echo are configured for WebSocket broadcasting; existing maintenance conversations continue to use polling until a feature is migrated.
+- Laravel Reverb and Echo power real-time repair-ticket conversations over authorized private channels, with polling as a fallback.
 - Official facility and repair/maintenance form generation.
 - Explicit tracking last names for new submissions; the tracker does not guess a surname from a full name. Legacy records without one retain legacy matching.
 

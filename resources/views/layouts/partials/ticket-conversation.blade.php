@@ -1,7 +1,7 @@
 {{-- Repair ticket conversation between the admins and the college staff who sent the ticket.
      Used on the Admin ticket page and the College ticket page (layouts/partials/ticket-detail).
      $ticket    : MaintenanceTicket with messages.user loaded
-     $fetchUrl  : GET route returning new messages as JSON (?after=<id>); polled every 10 s while the page is open
+     $fetchUrl  : GET route returning new messages as JSON (?after=<id>); used for fallback polling and after real-time events
      $sendUrl   : POST route that adds a message (works as a plain form without JavaScript)
      $otherSide : who is on the other end, e.g. "GSU admins" or "John C. Amar" --}}
 @php
@@ -12,7 +12,7 @@
 @endphp
 
 <section class="rqd-card tcv" id="conversation" aria-labelledby="tcv-title"
-         data-fetch="{{ $fetchUrl }}" data-send="{{ $sendUrl }}" data-last="{{ $lastId }}" data-closed="{{ $closed ? '1' : '0' }}">
+         data-fetch="{{ $fetchUrl }}" data-send="{{ $sendUrl }}" data-last="{{ $lastId }}" data-ticket-id="{{ $ticket->id }}" data-closed="{{ $closed ? '1' : '0' }}">
     <div class="tcv-head">
         <div class="u-minw-0">
             <h2 class="rqd-card-title tcv-title" id="tcv-title">Conversation</h2>
@@ -127,8 +127,20 @@
 
     function grow() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 160) + 'px'; }
 
-    async function poll() {
-        if (document.hidden) return;
+    function connectRealtime() {
+        if (!window.Echo) {
+            window.addEventListener('echo:ready', connectRealtime, { once: true });
+            return;
+        }
+
+        window.Echo.private('repair-ticket.' + box.dataset.ticketId)
+            .listen('.repair-ticket.message-created', function (event) {
+                if (Number(event.ticket_id) === Number(box.dataset.ticketId)) poll(true);
+            });
+    }
+
+    async function poll(force = false) {
+        if (document.hidden && !force) return;
         try {
             const r = await fetch(box.dataset.fetch + '?after=' + lastId, { headers: { Accept: 'application/json' } });
             if (!r.ok) return;
@@ -177,6 +189,7 @@
 
     toBottom();
     grow();
+    connectRealtime();
     setInterval(poll, 10000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
 })();

@@ -62,7 +62,7 @@ window.bkPicker = (function () {
         const grid = $('dp-grid');
         if (!input || !grid) return;
         const todayKey = new Date().toLocaleDateString('en-CA');
-        const calendarUrl = @json(route('admin.calendar'));
+        const calendarUrl = @json(route('calendar.data'));
         const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         const keyOf = (y, m, d) => y + '-' + pad(m + 1) + '-' + pad(d);
         const fmt = (key, opts) => new Date(key + 'T00:00').toLocaleDateString(undefined, opts || { weekday: 'short', month: 'short', day: 'numeric' });
@@ -106,28 +106,15 @@ window.bkPicker = (function () {
         function loadMonth(y, m) {
             const ym = y + '-' + pad(m + 1);
             if (cache[ym]) return Promise.resolve(cache[ym]);
-            return fetch(calendarUrl + '?month=' + ym, { headers: { Accept: 'text/html' }, credentials: 'same-origin' })
-                .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
-                .then(html => {
-                    const doc = new DOMParser().parseFromString(html, 'text/html');
-                    const data = { counts: {}, items: {} };
-                    doc.querySelectorAll('.cal-day[data-count]').forEach(el => { data.counts[el.dataset.date] = parseInt(el.dataset.count, 10) || 0; });
-                    doc.querySelectorAll('.res-table tr[data-date]').forEach(tr => {
-                        const date = tr.dataset.date;
-                        const it = describe({
-                            time: tr.dataset.time || '',
-                            start: tr.dataset.start || '',
-                            end: tr.dataset.end || '',
-                            event: tr.dataset.event || '',
-                            who: tr.dataset.who || '',
-                            facility: (tr.querySelector('.res-fac-cell') || {}).textContent?.trim() || 'Facility'
-                        });
-                        if (isIgnored(date, it)) {   // the booking being edited is not a clash with itself
+            return window.loadReservationCalendarMonth(calendarUrl, ym)
+                .then(data => {
+                    Object.keys(data.items).forEach(date => {
+                        data.items[date] = data.items[date].map(describe).filter(it => {
+                            if (!isIgnored(date, it)) return true;
                             if (data.counts[date]) data.counts[date]--;
                             if (!data.counts[date]) delete data.counts[date];
-                            return;
-                        }
-                        (data.items[date] = data.items[date] || []).push(it);
+                            return false;
+                        });
                     });
                     return (cache[ym] = data);
                 });

@@ -1,4 +1,5 @@
 import './bootstrap';
+import './reservation-calendar';
 
 let confirmedForm = null;
 
