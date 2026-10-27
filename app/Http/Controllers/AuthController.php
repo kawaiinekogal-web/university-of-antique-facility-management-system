@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends Controller
 {
+    private const LOGIN_MAX_ATTEMPTS = 5;
+    private const LOGIN_LOCKOUT_SECONDS = 1800;
+
     public function showLogin()
     {
         if (Auth::check()) {
@@ -18,12 +22,14 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $key = 'login:' . $request->ip();
-        $attempts = app('cache')->get($key, 0);
+        $key = 'login-cooldown:' . $request->ip();
+        $lockoutKey = $key . ':lockout';
 
-        if ($attempts >= 5) {
+        if (RateLimiter::tooManyAttempts($lockoutKey, 1)) {
+            $minutes = max(1, (int) ceil(RateLimiter::availableIn($lockoutKey) / 60));
+
             return back()->withErrors([
-                'email' => 'Too many login attempts. Please try again later.',
+                'email' => "Too many failed sign-in attempts. Please try again in {$minutes} minute(s).",
             ])->onlyInput('email');
         }
 
@@ -33,15 +39,25 @@ class AuthController extends Controller
         ]) + ['is_active' => true];
 
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
-            app('cache')->increment($key);
-            app('cache')->put($key, app('cache')->get($key, 0), now()->addMinute());
+            RateLimiter::hit($key, self::LOGIN_LOCKOUT_SECONDS);
+
+            if (RateLimiter::tooManyAttempts($key, self::LOGIN_MAX_ATTEMPTS)) {
+                RateLimiter::clear($key);
+                RateLimiter::clear($lockoutKey);
+                RateLimiter::hit($lockoutKey, self::LOGIN_LOCKOUT_SECONDS);
+
+                return back()->withErrors([
+                    'email' => 'Too many failed sign-in attempts. Please try again in 30 minutes.',
+                ])->onlyInput('email');
+            }
 
             return back()->withErrors([
                 'email' => 'Access denied. Invalid credentials.',
             ])->onlyInput('email');
         }
 
-        app('cache')->forget($key);
+        RateLimiter::clear($key);
+        RateLimiter::clear($lockoutKey);
 
         // Each portal card on the landing page only lets its own accounts in
         // (accounts created by a college/org head share that unit's role, so they follow the same rule)
