@@ -57,4 +57,4 @@ php artisan test
 
 GitHub Actions runs the automated test suite and production asset build on pushes and pull requests to `main`, using a temporary MySQL database.
 
-See [QUICKSTART.md](QUICKSTART.md), [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md), and [TESTING_GUIDE.md](TESTING_GUIDE.md) for setup and workflow details. The [Functional Design Document](fdd.md), [controller reference](controller-documentation.md), [routes and views reference](views-and-routes-documentation.md), [model reference](model-documentation.md), and [architecture/ERD](tech-stack-architecture-erd.md) describe the system.
+See [USER_ONBOARDING_GUIDE.md](USER_ONBOARDING_GUIDE.md) for role-based user training, plus [QUICKSTART.md](QUICKSTART.md), [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md), and [TESTING_GUIDE.md](TESTING_GUIDE.md) for setup and workflow details. The [Functional Design Document](fdd.md), [controller reference](controller-documentation.md), [routes and views reference](views-and-routes-documentation.md), [model reference](model-documentation.md), and [architecture/ERD](tech-stack-architecture-erd.md) describe the system.

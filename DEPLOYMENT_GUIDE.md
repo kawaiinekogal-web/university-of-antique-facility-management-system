@@ -70,6 +70,14 @@ php artisan reverb:start --host=127.0.0.1 --port=8080
 
 Configure Nginx/Apache to proxy WebSocket upgrades from the public WSS endpoint to that process. Keep the Reverb app secret private and allow the configured public WebSocket port through the firewall only where required. Developers can start Reverb alongside the other local services with `composer run dev`. Repair-ticket messages are broadcast to authorized private channels; the conversation UI retains polling as a fallback when a WebSocket connection is unavailable.
 
+### Single ngrok tunnel for local testing
+
+When a single ngrok HTTP tunnel must serve both Laravel and Reverb, run the included Node proxy on port `8000`. It forwards normal requests to Laravel on port `8011`, Reverb WebSocket handshakes under `/app/` to port `8080`, and signed Reverb publishing requests under `/apps/` to port `8080`. Point the single ngrok tunnel at port `8000`. Visitors only open the ngrok website; they do not install anything.
+
+Set the browser-facing `REVERB_HOST`, `REVERB_PORT`, `REVERB_SCHEME`, and `REVERB_ALLOWED_ORIGINS` to include the ngrok hostname (hostnames only in `REVERB_HOST` and `REVERB_ALLOWED_ORIGINS`). Set `REVERB_BROADCAST_HOST=127.0.0.1`, `REVERB_BROADCAST_PORT=8080`, and `REVERB_BROADCAST_SCHEME=http` so Laravel publishes directly to the local Reverb server. Build assets again after changing `VITE_REVERB_*`, then run the app with `composer run dev:ngrok`; the existing ngrok HTTP tunnel should point to port `8000`.
+
+This proxy is for local development/testing only. For production, use a TLS-terminating reverse proxy such as Nginx in front of Laravel and Reverb, and restrict Reverb origins to the application's real hostname.
+
 ## Audit trail
 
 Apply the `audit_logs` migration during deployment. Admins can review and filter changes at `/admin/audit-logs`. Audit rows are append-only through the application UI, include actor/request metadata and field diffs, and redact passwords, contact details, submitted payloads, and message/file contents.

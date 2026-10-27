@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Traits;
 use App\Events\MaintenanceTicketMessageCreated;
 use App\Models\MaintenanceTicket;
 use App\Models\MaintenanceTicketMessage;
+use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Repair ticket conversation between the admins and the college staff who sent the ticket.
@@ -68,7 +70,15 @@ trait HandlesTicketMessages
         $message->setRelation('user', auth()->user());
 
         $this->notifyNewMessage($ticket, $message);
-        broadcast(new MaintenanceTicketMessageCreated($ticket->id, $message->id));
+        try {
+            broadcast(new MaintenanceTicketMessageCreated($ticket->id, $message->id));
+        } catch (BroadcastException $exception) {
+            Log::warning('Repair ticket message broadcast failed; polling remains available.', [
+                'ticket_id' => $ticket->id,
+                'message_id' => $message->id,
+                'exception' => $exception::class,
+            ]);
+        }
 
         return $request->expectsJson()
             ? response()->json(['message' => $this->messageJson($message)], 201)
