@@ -20,6 +20,9 @@ class FormSubmission extends Model
         'payload',        // JSON string
         'payment_attachment',
         'payment_status', // 'not_required', 'pending_payment', 'payment_uploaded', 'payment_verified'
+        'payment_method',
+        'payment_reference',
+        'payment_amount',
     ];
 
     protected $casts = [

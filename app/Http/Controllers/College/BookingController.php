@@ -50,7 +50,6 @@ class BookingController extends Controller
         // Search by facility name or purpose
         if ($request->filled('search')) {
             $search = $request->input('search');
-            // Grouped: an ungrouped OR skipped the requester_id filter and showed other users' bookings
             $query->where(function ($query) use ($search) {
                 $query->where('purpose', 'like', '%' . $search . '%')
                     ->orWhereHas('facilities', function ($q) use ($search) {
@@ -59,7 +58,9 @@ class BookingController extends Controller
             });
         }
 
-        $bookings = $this->paginateReservations($query, $request, 15);
+        // Sort by start_time descending
+        $bookings = $query->orderByDesc('start_time')
+            ->paginate(15);
 
         // Get available facilities for filter dropdown
         $facilities = Facility::where('is_active', true)

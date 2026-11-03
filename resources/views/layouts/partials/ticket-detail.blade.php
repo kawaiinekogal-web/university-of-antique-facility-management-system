@@ -139,6 +139,19 @@
                 @endif
             </section>
 
+            @if ($ticket->status === 'failed')
+                <section class="rqd-card">
+                    <h2 class="rqd-card-title">Failure report</h2>
+                    <dl class="rqd-rows">
+                        <div class="rqd-row"><dt>Why it could not be fixed</dt><dd class="rqd-pre">{{ $ticket->failure_reason ?: 'Not provided' }}</dd></div>
+                        <div class="rqd-row"><dt>Action taken</dt><dd class="rqd-pre">{{ $ticket->resolution_action ?: 'Not provided' }}</dd></div>
+                        @if ($ticket->replacement_recommendation)
+                            <div class="rqd-row"><dt>Recommended replacement</dt><dd class="rqd-pre">{{ $ticket->replacement_recommendation }}</dd></div>
+                        @endif
+                    </dl>
+                </section>
+            @endif
+
             {{-- Tracking --}}
             <section class="rqd-card">
                 <h2 class="rqd-card-title">Track it anytime</h2>

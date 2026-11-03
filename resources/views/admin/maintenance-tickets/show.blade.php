@@ -152,6 +152,22 @@
                     <p class="pk-help" data-remarks-help>{{ $isReplacement ? 'Required. Explain why it can\'t be repaired and what needs to be replaced. Shown to the sender.' : 'Shown to the sender on their request page.' }}</p>
                 </div>
 
+                <fieldset class="mtd-failure-fields">
+                    <legend class="pk-label">Failure report <span class="u-optional">(required when status is Failed)</span></legend>
+                    <div class="pk-field">
+                        <label for="failure_reason" class="pk-label">Why could it not be fixed?</label>
+                        <textarea id="failure_reason" name="failure_reason" rows="3" maxlength="5000" class="pk-input">{{ old('failure_reason', $ticket->failure_reason) }}</textarea>
+                    </div>
+                    <div class="pk-field">
+                        <label for="resolution_action" class="pk-label">Action taken / feedback</label>
+                        <textarea id="resolution_action" name="resolution_action" rows="3" maxlength="5000" class="pk-input">{{ old('resolution_action', $ticket->resolution_action) }}</textarea>
+                    </div>
+                    <div class="pk-field">
+                        <label for="replacement_recommendation" class="pk-label">Replacement recommendation</label>
+                        <textarea id="replacement_recommendation" name="replacement_recommendation" rows="2" maxlength="5000" class="pk-input" placeholder="e.g. Replace with an industrial fan">{{ old('replacement_recommendation', $ticket->replacement_recommendation) }}</textarea>
+                    </div>
+                </fieldset>
+
                 <div class="pk-form-actions">
                     <a href="{{ route('admin.maintenance-tickets.index') }}" class="pk-btn-outline">Cancel</a>
                     <button type="submit" class="pk-btn">Save update</button>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Support\VenueRates;
 
 class Facility extends Model
 {
@@ -88,6 +89,13 @@ class Facility extends Model
     {
         return $this->is_active
             && !in_array($this->availability_status, ['unavailable', 'maintenance'], true);
+    }
+
+    public function estimatedSeatingCapacity(): ?int
+    {
+        $capacity = VenueRates::estimatedSeatingCapacityFor($this->name);
+
+        return is_numeric($capacity) ? (int) $capacity : null;
     }
 
     public function isOwnedByCollege(string $collegeName): bool

@@ -316,6 +316,14 @@
                 </div>
             </div>
 
+                    <div class="pk-field u-mt-4">
+                        <label for="equipment_other" class="pk-label">Other equipment <span class="u-optional">(optional)</span></label>
+                        <input type="text" name="equipment_other" id="equipment_other" maxlength="255" class="pk-input" value="{{ old('equipment_other') }}" placeholder="e.g. industrial fan, extension cords">
+                        <p class="pk-help">List additional equipment not shown above.</p>
+                    </div>
+                </div>
+            </div>
+
             {{-- Attachments (optional) --}}
             <div class="pk-step">
                 <span class="pk-step-num">05</span>

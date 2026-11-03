@@ -21,6 +21,15 @@
 
         return [$normName($venue['name']) => $rate];
     });
+    $equipmentList = [
+        ['name' => 'qty_monobloc', 'label' => 'Monobloc Chair'],
+        ['name' => 'qty_table', 'label' => 'Table'],
+        ['name' => 'qty_fan', 'label' => 'Electric Fan'],
+        ['name' => 'qty_rostrum', 'label' => 'Rostrum'],
+        ['name' => 'qty_flag', 'label' => 'Flag & School Color'],
+        ['name' => 'qty_sound', 'label' => 'Sound System'],
+        ['name' => 'qty_led', 'label' => 'LED Wall'],
+    ];
 @endphp
 
 <div class="pk-page pr">
@@ -112,36 +121,7 @@
                             <input type="text" name="organization" id="organization" required autocomplete="organization" class="pk-input" value="{{ old('organization') }}" placeholder="Company, agency or group you represent" @error('organization') aria-invalid="true" @enderror>
                             @error('organization')<p class="pr-err">{{ $message }}</p>@enderror
                         </div>
-                        <fieldset class="pk-field ga-address" data-address-src="{{ asset('data/ph-address') }}"
-                                  data-old-province="{{ old('address_province', 'Antique') }}" data-old-town="{{ old('address_town') }}" data-old-barangay="{{ old('address_barangay') }}">
-                            <legend class="pk-label">Address <span class="pk-req">*</span></legend>
-                            <p class="pk-help">Pick your province first, then your town or city, then your barangay.</p>
-                            <div class="ga-address-grid">
-                                <div>
-                                    <label class="ga-address-label" for="address_province">Province</label>
-                                    <select name="address_province" id="address_province" required class="pk-input" autocomplete="address-level1">
-                                        <option value="">Loading…</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="ga-address-label" for="address_town">Town / City</label>
-                                    <select name="address_town" id="address_town" required class="pk-input" autocomplete="address-level2" disabled>
-                                        <option value="">Choose a province first</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="ga-address-label" for="address_barangay">Barangay</label>
-                                    <select name="address_barangay" id="address_barangay" required class="pk-input" autocomplete="address-level3" disabled>
-                                        <option value="">Choose a town first</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <label class="ga-address-label" for="address_street">House no. / Street / Purok <span class="ga-optional">(optional)</span></label>
-                            <input type="text" name="address_street" id="address_street" maxlength="120" autocomplete="address-line1" class="pk-input" value="{{ old('address_street') }}" placeholder="e.g. Purok 3, Rizal St.">
-                            @foreach (['address', 'address_province', 'address_town', 'address_barangay', 'address_street'] as $field)
-                                @error($field)<p class="pr-err">{{ $message }}</p>@enderror
-                            @endforeach
-                        </fieldset>
+                        @include('partials.address-fields')
                     </div>
                 </div>
             </div>
@@ -240,9 +220,9 @@
                             <span id="vb-day-text">Pick a date in step 2 to see booked times</span>
                         </span>
                         <span class="vb-key" aria-hidden="true">
-                            <span><i class="u-bg-success"></i>Available</span>
-                            <span><i class="u-bg-warn"></i>Partly booked · AM or PM only</span>
-                            <span><i class="u-bg-danger"></i>Fully booked · whole day</span>
+                            <span><i class="u-bg-success"></i>Free</span>
+                            <span><i class="u-bg-warn"></i>Partly booked</span>
+                            <span><i class="u-bg-danger"></i>Fully booked</span>
                         </span>
                     </div>
                     @php $selectedFacilityIds = array_map('intval', (array) old('facility_ids', old('facility_id') ? [old('facility_id')] : [])); @endphp
@@ -259,8 +239,6 @@
                                 <input type="checkbox" name="facility_ids[]" id="venue-{{ $facility->id }}" value="{{ $facility->id }}"
                                        data-name="{{ $facility->name }}"
                                        data-rental-fee="{{ $fee }}"
-                                       data-capacity="{{ \App\Support\VenueRates::seatingCapacityFor($facility->name) }}"
-                                       data-equipment="{{ json_encode(\App\Support\VenueRates::suggestedEquipmentFor($facility->name)) }}"
                                        {{ in_array($facility->id, $selectedFacilityIds, true) ? 'checked' : '' }}
                                        {{ $isUnavailable ? 'disabled' : '' }}>
                                 <label for="venue-{{ $facility->id }}">
@@ -292,7 +270,6 @@
                         <textarea name="purpose" id="purpose" required rows="3" class="pk-input" placeholder="What the venue will be used for, e.g. seminar, assembly, sports event" @error('purpose') aria-invalid="true" @enderror>{{ old('purpose') }}</textarea>
                         @error('purpose')<p class="pr-err">{{ $message }}</p>@enderror
                     </div>
-                    @include('partials.number-of-persons')
                 </div>
             </div>
 
@@ -301,7 +278,7 @@
                 <span class="pk-step-num">04</span>
                 <div>
                     <h2>Facilities / Equipment to be used</h2>
-                    <p class="pk-step-intro">The venue fee and suggested equipment are filled in from the venues you pick; chairs follow the number of persons. Adjust any quantity below.</p>
+                    <p class="pk-step-intro">The venue fee is filled in from the venue and days you pick; add equipment quantities below.</p>
 
                     {{-- Venue fee breakdown (filled in by the fee calculator) --}}
                     <div class="pr-fee" aria-live="polite">
@@ -317,8 +294,28 @@
                         </dl>
                     </div>
 
-                    @include('partials.equipment-tiles')
-                    @include('partials.equipment-others')
+                    <h3 class="pr-sub">Equipment <span>Enter how many of each you need</span></h3>
+                    <div class="pk-equip">
+                        @foreach($equipmentList as $equipment)
+                            <div class="pk-equip-row pr-qty">
+                                <label class="pk-label" for="{{ $equipment['name'] }}">{{ $equipment['label'] }}</label>
+                                <div class="pr-step-ctl">
+                                    <button type="button" data-step="-1" aria-label="Fewer {{ $equipment['label'] }}" tabindex="-1">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+                                    </button>
+                                    <input type="number" name="{{ $equipment['name'] }}" id="{{ $equipment['name'] }}" min="0" value="{{ old($equipment['name'], 0) }}" inputmode="numeric">
+                                    <button type="button" data-step="1" aria-label="More {{ $equipment['label'] }}" tabindex="-1">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="pk-field u-mt-4">
+                        <label class="pk-label" for="equipment_other">Other equipment <span class="u-optional">(optional)</span></label>
+                        <input type="text" name="equipment_other" id="equipment_other" maxlength="255" class="pk-input" value="{{ old('equipment_other') }}" placeholder="e.g. industrial fan, extension cords">
+                        <p class="pk-help">List additional equipment not shown above.</p>
+                    </div>
 
                     <div class="pr-grand">
                         <span>Total</span>
@@ -405,8 +402,6 @@
                 <div class="pk-ticket-body">
                     <div class="pk-ticket-row"><span>Facility</span><strong id="sum-venue" class="is-empty">None selected</strong></div>
                     <div class="pk-ticket-row"><span>Purpose</span><strong id="sum-purpose" class="is-empty">—</strong></div>
-                    <div class="pk-ticket-row"><span>Persons</span><strong id="sum-persons" class="is-empty">—</strong></div>
-                    <div class="pk-ticket-row"><span>Equipment</span><strong id="sum-equip" class="is-empty">None</strong></div>
                 </div>
             </div>
             <div class="ga-estimate">
@@ -464,6 +459,14 @@ form.addEventListener('change', calculateTotal);
 calculateTotal();
 
 // Equipment −/+ buttons nudge the quantity field (the field itself is still typeable)
+document.querySelectorAll('.pr-step-ctl button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        const input = btn.parentElement.querySelector('input');
+        input.value = Math.max(0, (parseInt(input.value, 10) || 0) + Number(btn.dataset.step));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+});
+
 // "Client/Representative" mirrors the name typed in step 01
 document.getElementById('client_name').addEventListener('input', function () { document.getElementById('ga-rep').value = this.value; });
 
@@ -517,11 +520,6 @@ document.querySelectorAll('.pk-drop input[type="file"]').forEach(function (input
         setText($('sum-venue'), venues.map(venue => venue.dataset.name).join(', '), 'None selected');
         const purpose = $('purpose').value.trim();
         setText($('sum-purpose'), purpose.length > 90 ? purpose.slice(0, 90) + '…' : purpose, '—');
-        setText($('sum-persons'), $('number_of_persons').value, '—');
-        const equip = Array.from(form.querySelectorAll('.eq-count'))
-            .filter(i => parseInt(i.value || '0', 10) > 0 && i.dataset.label)
-            .map(i => i.value + ' × ' + i.dataset.label);
-        setText($('sum-equip'), equip.join(', '), 'None');
         $('sum-total').textContent = $('grandTotalCell').textContent;
         $('sum-total-m').textContent = $('grandTotalCell').textContent;
     }
@@ -561,11 +559,8 @@ document.querySelectorAll('.pk-drop input[type="file"]').forEach(function (input
                 const len = b - a, hrs = Math.round(len / 30) / 2;
                 it.hours = hrs + (hrs === 1 ? ' hr' : ' hrs');
                 it.until = clock12(it.end);
-                // Morning (AM) = starts before 12 PM; afternoon (PM) = runs past 1 PM (12–1 PM is slack). Both halves = whole day.
-                it.am = a < 720;
-                it.pm = b > 780 || !it.am;
-                it.whole = it.am && it.pm;
-                it.span = it.whole ? 'Whole day' : (it.am ? 'Half day · Morning' : 'Half day · Afternoon');
+                it.whole = len >= 360;
+                it.span = it.whole ? 'Whole day' : 'Half day' + (b <= 780 ? ' · Morning' : (a >= 720 ? ' · Afternoon' : ''));
             }
             return it;
         }
@@ -835,20 +830,11 @@ document.querySelectorAll('.pk-drop input[type="file"]').forEach(function (input
                 } else {
                     slotsBox.innerHTML = mine.map(it => window.dpBookingHtml(it, { date: multi ? shortDate(it.date) : '' })).join('');
                 }
-                // Per day: AM and PM both taken = fully booked; only one half taken = partly booked
-                const halves = (list) => ({ am: list.some(it => it.am), pm: list.some(it => it.pm) });
-                const fullDays = current.days.filter(d => { const h = halves(mine.filter(it => it.date === d.date)); return h.am && h.pm; }).length;
-                const day = halves(mine);
-                let label, tone;
-                if (!current.start || !mine.length) { label = 'Available'; tone = 'is-good'; }
-                else if (multi) {
-                    label = (fullDays ? 'Fully booked ' + fullDays : 'Partly booked ' + bookedDays) + ' of ' + current.days.length + ' days';
-                    tone = fullDays ? 'is-bad' : 'is-warn';
-                }
-                else if (day.am && day.pm) { label = 'Fully booked · whole day'; tone = 'is-bad'; }
-                else { label = day.am ? 'Partly booked · PM free' : 'Partly booked · AM free'; tone = 'is-warn'; }
+                const label = !current.start || !mine.length ? 'Available'
+                    : (multi ? 'Booked ' + bookedDays + ' of ' + current.days.length + ' days' : (mine.some(it => it.whole) ? 'Booked whole day' : 'Partly booked'));
                 status.textContent = label;
-                status.className = 'pk-pill vb-status ' + tone;
+                const fullyTaken = !multi && mine.some(it => it.whole);
+                status.className = 'pk-pill vb-status ' + (!current.start || !mine.length ? 'is-good' : (fullyTaken ? 'is-bad' : 'is-warn'));
                 // Flag venues whose bookings overlap the start/end time on any chosen day
                 const clash = start !== null && end !== null && mine.some(it => { const [a, b] = rangeOf(it.time); return a !== null && b !== null && a < end && b > start; });
                 card.classList.toggle('is-clash', clash);
@@ -870,8 +856,6 @@ document.querySelectorAll('.pk-drop input[type="file"]').forEach(function (input
 
 })();
 </script>
-@include('partials.address-picker')
-@include('partials.venue-equipment-suggest')
 @include('partials.facility-time-availability')
 @include('partials.phone-number-mask', ['inputId' => 'contact_number'])
 @endsection

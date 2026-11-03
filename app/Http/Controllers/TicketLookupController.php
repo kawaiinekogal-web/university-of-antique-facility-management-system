@@ -124,10 +124,16 @@ class TicketLookupController extends Controller
                 'mimetypes:image/jpeg,image/png,application/pdf',
                 'max:10240',
             ],
+            'payment_method' => ['nullable', 'string', 'max:80'],
+            'payment_reference' => ['nullable', 'string', 'max:120'],
+            'payment_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999.99'],
         ]);
 
         $submission->payment_attachment = $validated['payment_attachment']->store('receipts', 'payment_receipts');
         $submission->payment_status = 'payment_uploaded';
+        $submission->payment_method = $validated['payment_method'] ?? null;
+        $submission->payment_reference = $validated['payment_reference'] ?? null;
+        $submission->payment_amount = $validated['payment_amount'] ?? null;
         $submission->save();
 
         return response()->json([

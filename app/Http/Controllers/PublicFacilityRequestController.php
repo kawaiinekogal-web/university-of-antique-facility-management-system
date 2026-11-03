@@ -39,6 +39,16 @@ class PublicFacilityRequestController extends Controller
 
     public function store(StoreFacilitiesUtilizationRequest $request)
     {
+        if ($request->filled('address') && ! $request->filled('street_address')) {
+            $request->merge([
+                'street_address' => $request->input('address'),
+                'barangay' => 'Not provided',
+                'city_municipality' => 'Not provided',
+                'province' => 'Not provided',
+                'country' => 'Philippines',
+            ]);
+        }
+
         // Spam trap: real visitors never see or fill the "website" field
         if ($request->filled('website')) {
             return redirect()->route('public.request.create');
@@ -49,18 +59,14 @@ class PublicFacilityRequestController extends Controller
             'last_name'              => ['required', 'string', 'max:120', new PersonName],
             'contact_number'         => 'required|string|max:40',
             'email'                  => 'required|email|max:160',
-            'address_street'         => 'nullable|string|max:120',
-            'address_barangay'       => 'required|string|max:120',
-            'address_town'           => 'required|string|max:120',
-            'address_province'       => 'required|string|max:120',
+            'street_address'         => 'required|string|max:255',
+            'barangay'               => 'required|string|max:120',
+            'city_municipality'      => 'required|string|max:120',
+            'province'               => 'required|string|max:120',
+            'country'                => ['required', 'string', 'max:80', \Illuminate\Validation\Rule::in(['Philippines'])],
             'organization'           => 'required|string|max:160',
             'noted_signatory_id'     => 'required|in:custom',
             'noted_signatory_custom' => 'required_if:noted_signatory_id,custom|string|max:255',
-        ], [], [
-            'address_street'   => 'house no. / street',
-            'address_barangay' => 'barangay',
-            'address_town'     => 'town or city',
-            'address_province' => 'province',
         ]);
 
         $walkIn = User::firstOrCreate(
@@ -88,8 +94,12 @@ class PublicFacilityRequestController extends Controller
         $payload['client_name']          = $guest['client_name'];
         $payload['contact_number']       = $guest['contact_number'];
         $payload['email']                = $guest['email'];
-        $payload['address']              = collect([$guest['address_street'] ?? null, preg_match('/^(barangay|brgy)\b/i', $guest['address_barangay']) ? $guest['address_barangay'] : 'Brgy. ' . $guest['address_barangay'], $guest['address_town'], $guest['address_province']])
-            ->filter()->join(', ');
+        $payload['street_address']      = $guest['street_address'];
+        $payload['barangay']             = $guest['barangay'];
+        $payload['city_municipality']    = $guest['city_municipality'];
+        $payload['province']             = $guest['province'];
+        $payload['country']              = $guest['country'];
+        $payload['address']              = implode(', ', [$guest['street_address'], $guest['barangay'], $guest['city_municipality'], $guest['province'], $guest['country']]);
         $payload['organization']         = $guest['organization'];
         $payload['noted_signatory_id']   = $guest['noted_signatory_id'];
         $payload['noted_signatory_name'] = $guest['noted_signatory_custom'];

@@ -222,7 +222,12 @@
                             <dd>
                                 {{ $submission->payload['contact_number'] ?? '—' }}
                                 @if (!empty($submission->payload['email']))<a href="mailto:{{ $submission->payload['email'] }}" class="rqd-link">{{ $submission->payload['email'] }}</a>@endif
-                                @if (!empty($submission->payload['address']))<span class="rqd-sub">{{ $submission->payload['address'] }}</span>@endif
+                                @if (!empty($submission->payload['street_address']))
+                                    <span class="rqd-sub">{{ $submission->payload['street_address'] }}</span>
+                                    <span class="rqd-sub">{{ collect([$submission->payload['barangay'] ?? null, $submission->payload['city_municipality'] ?? null, $submission->payload['province'] ?? null, $submission->payload['country'] ?? null])->filter()->join(', ') }}</span>
+                                @elseif (!empty($submission->payload['address']))
+                                    <span class="rqd-sub">{{ $submission->payload['address'] }}</span>
+                                @endif
                             </dd>
                         </div>
                     @endif
@@ -319,6 +324,9 @@
                 @else
                     <p class="rqd-muted">No equipment requested.</p>
                 @endif
+                @if (!empty($p['equipment_other']))
+                    <p class="rqd-sub"><strong>Other:</strong> {{ $p['equipment_other'] }}</p>
+                @endif
             </section>
 
             {{-- Payment --}}
@@ -342,6 +350,16 @@
                             <dt>Receipt</dt>
                             <dd><a href="{{ route('payment-receipts.show', $submission) }}" class="rqd-link">Download receipt</a></dd>
                         </div>
+                        @if ($submission->payment_method || $submission->payment_reference || $submission->payment_amount !== null)
+                            <div class="rqd-row">
+                                <dt>Payment details</dt>
+                                <dd>
+                                    {{ $submission->payment_method ? ucfirst(str_replace('_', ' ', $submission->payment_method)) : 'Method not provided' }}
+                                    @if ($submission->payment_reference) · Ref {{ $submission->payment_reference }} @endif
+                                    @if ($submission->payment_amount !== null) · ₱{{ number_format((float) $submission->payment_amount, 2) }} @endif
+                                </dd>
+                            </div>
+                        @endif
                     </dl>
                     @if ($submission->payment_status === 'payment_uploaded')
                         <form method="POST" action="{{ route('admin.forms.facilities.verify-payment', $submission) }}" class="rqd-btn-row rqd-payment-form">

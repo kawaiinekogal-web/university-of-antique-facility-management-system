@@ -99,10 +99,7 @@
                         </div>
                     </div>
                     <div class="u-stack-14 u-mt-14">
-                        <div class="pk-field">
-                            <label class="pk-label" for="address">Address <span class="pk-req">*</span></label>
-                            <input type="text" name="address" id="address" required class="pk-input" value="{{ old('address') }}" placeholder="Enter your complete address">
-                        </div>
+                        @include('partials.address-fields')
                         <div class="pk-field">
                             <label class="pk-label" for="organization">Organization/Agency <span class="pk-req">*</span></label>
                             <input type="text" name="organization" id="organization" required class="pk-input" value="{{ old('organization', auth()->user()->organization_name ?? '') }}">
@@ -299,6 +296,10 @@
                                     <td class="ga-r">-</td>
                                 </tr>
                                 @endforeach
+                                <tr>
+                                    <td><label for="equipment_other">Other equipment</label></td>
+                                    <td colspan="5"><input type="text" name="equipment_other" id="equipment_other" maxlength="255" class="pk-input" value="{{ old('equipment_other') }}" placeholder="e.g. industrial fan, extension cords"></td>
+                                </tr>
 
                                 {{-- Total Row --}}
                                 <tr class="ga-total">

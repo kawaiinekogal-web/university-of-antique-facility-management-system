@@ -265,6 +265,17 @@ document.addEventListener('DOMContentLoaded', function () {
           <input type="hidden" name="_token" value="{{ csrf_token() }}">
           <label for="ua-tr-payment-file">Payment receipt (JPG, PNG, or PDF, max 10 MB)</label>
           <input type="file" id="ua-tr-payment-file" name="payment_attachment" accept=".jpg,.jpeg,.png,.pdf" required>
+          <label for="ua-tr-payment-method">Payment method</label>
+          <select id="ua-tr-payment-method" name="payment_method">
+            <option value="">Select method</option>
+            <option value="online">Online payment</option>
+            <option value="bank_transfer">Bank transfer</option>
+            <option value="cashier">Cashier</option>
+          </select>
+          <label for="ua-tr-payment-reference">Reference number (optional)</label>
+          <input type="text" id="ua-tr-payment-reference" name="payment_reference" maxlength="120">
+          <label for="ua-tr-payment-amount">Amount paid (optional)</label>
+          <input type="number" id="ua-tr-payment-amount" name="payment_amount" min="0" step="0.01">
           <button class="ua-tr-primary" type="submit">Submit receipt</button>
         </form>
         <p id="ua-tr-payment-message" role="status" hidden></p>

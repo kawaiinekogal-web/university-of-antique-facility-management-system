@@ -61,7 +61,18 @@ trait SubmitsFacilitiesForm
             'facility_names'  => $facilityNames,
             'venue_others'    => $validated['venue_others'] ?? '',
             'purpose'         => $validated['purpose'],
-            'number_of_persons' => isset($validated['number_of_persons']) ? (int) $validated['number_of_persons'] : null,
+            'street_address'  => $validated['street_address'] ?? null,
+            'barangay'        => $validated['barangay'] ?? null,
+            'city_municipality' => $validated['city_municipality'] ?? null,
+            'province'        => $validated['province'] ?? null,
+            'country'         => $validated['country'] ?? null,
+            'address'         => collect([
+                $validated['street_address'] ?? null,
+                $validated['barangay'] ?? null,
+                $validated['city_municipality'] ?? null,
+                $validated['province'] ?? null,
+                $validated['country'] ?? null,
+            ])->filter()->implode(', '),
             'equipment'       => [
                 'monobloc_chair' => (int) $request->input('qty_monobloc', 0),
                 'table'          => (int) $request->input('qty_table', 0),
@@ -71,7 +82,7 @@ trait SubmitsFacilitiesForm
                 'sound'          => (int) $request->input('qty_sound', 0),
                 'led'            => (int) $request->input('qty_led', 0),
             ],
-            'equipment_others' => FormSubmission::otherEquipmentFrom($validated),
+            'equipment_other' => trim((string) $request->input('equipment_other', '')),
         ];
 
         if ($attachmentPaths) {

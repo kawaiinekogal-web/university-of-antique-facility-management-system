@@ -20,6 +20,16 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->filled('address') && ! $this->filled('street_address')) {
+            $this->merge([
+                'street_address' => $this->input('address'),
+                'barangay' => 'Not provided',
+                'city_municipality' => 'Not provided',
+                'province' => 'Not provided',
+                'country' => 'Philippines',
+            ]);
+        }
+
         if (! $this->routeIs('public.request.store') && $this->user()) {
             $this->merge(['last_name' => $this->user()->last_name]);
         }
@@ -31,6 +41,8 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
 
     public function rules(): array
     {
+        $requiresAddress = $this->routeIs('public.request.store', 'guest.requests.facilities.store');
+
         return [
             'last_name' => ['required', 'string', 'max:120', new PersonName],
             'date_activity' => 'required|date|after_or_equal:' . now()->addDays(30)->toDateString(),
@@ -72,7 +84,11 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
                 }
             ],
             'purpose'       => 'required|string|max:500',
-            'number_of_persons' => 'nullable|integer|min:1|max:100000',
+            'street_address' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:255'],
+            'barangay' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:120'],
+            'city_municipality' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:120'],
+            'province' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:120'],
+            'country' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:80', Rule::in(['Philippines'])],
             'qty_monobloc'  => 'nullable|integer|min:0',
             'qty_table'     => 'nullable|integer|min:0',
             'qty_fan'       => 'nullable|integer|min:0',
@@ -80,8 +96,8 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
             'qty_flag'      => 'nullable|integer|min:0',
             'qty_sound'     => 'nullable|integer|min:0',
             'qty_led'       => 'nullable|integer|min:0',
+            'equipment_other' => 'nullable|string|max:255',
             'venue_others'  => 'nullable|string|max:255',
-            ...\App\Models\FormSubmission::OTHER_EQUIPMENT_RULES,
 
             // Noted by (signatory)
             'noted_signatory_id' => 'nullable|string',

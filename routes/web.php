@@ -37,6 +37,12 @@ Route::get('/calendar/data', [\App\Http\Controllers\PublicCalendarController::cl
     ->middleware('throttle:120,1')
     ->name('calendar.data');
 
+Route::prefix('api/addresses')->middleware('throttle:120,1')->group(function () {
+    Route::get('/provinces', [\App\Http\Controllers\AddressLookupController::class, 'provinces'])->name('addresses.provinces');
+    Route::get('/cities/{provinceCode}', [\App\Http\Controllers\AddressLookupController::class, 'cities'])->where('provinceCode', '\d{9}')->name('addresses.cities');
+    Route::get('/barangays/{cityCode}', [\App\Http\Controllers\AddressLookupController::class, 'barangays'])->where('cityCode', '\d{9}')->name('addresses.barangays');
+});
+
 // Landing page "Track a request": look up a facility ticket by its FM code + last name (read-only, rate-limited)
 Route::get('/track/ticket', [\App\Http\Controllers\TicketLookupController::class, 'show'])
     ->middleware('throttle:20,1')

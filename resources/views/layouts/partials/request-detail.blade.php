@@ -201,6 +201,9 @@
                 @else
                     <p class="rqd-muted">No equipment requested.</p>
                 @endif
+                @if (!empty($p['equipment_other']))
+                    <p class="rqd-sub"><strong>Other:</strong> {{ $p['equipment_other'] }}</p>
+                @endif
             </section>
 
             @if (!empty($p['attachments']))
