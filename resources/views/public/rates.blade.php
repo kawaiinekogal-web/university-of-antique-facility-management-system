@@ -2,8 +2,6 @@
 
 @section('title', 'Venue Rates – UA Facility Management System')
 
-@section('no-public-header', true)
-
 @section('content')
 @include('layouts.partials.page-kit')
 @php

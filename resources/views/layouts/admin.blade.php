@@ -10,8 +10,17 @@
             'heading' => 'Overview',
             'links' => [
                 ['label' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'dashboard'],
-                ['label' => 'Monthly records', 'route' => 'admin.monthly-records.index', 'icon' => 'records'],
-                ['label' => 'Repair records', 'route' => 'admin.repair-records.index', 'icon' => 'chart'],
+                ['label' => 'Reservation calendar', 'route' => 'admin.calendar', 'icon' => 'calendar'],
+                ['label' => 'Reservations', 'route' => 'admin.bookings.index', 'routes' => ['admin.bookings.index'], 'icon' => 'bookmark'],
+            ],
+        ],
+        [
+            // Same order as the College/Org "Requests" group: list, create, repair
+            'heading' => 'Requests',
+            'links' => [
+                ['label' => 'All requests', 'route' => 'admin.forms.facilities.index', 'routes' => 'admin.forms.facilities.*', 'icon' => 'approve'],
+                ['label' => 'Create direct reservation', 'route' => 'admin.bookings.create-direct', 'routes' => ['admin.bookings.create-direct'], 'icon' => 'edit'],
+                ['label' => 'Repair & maintenance', 'route' => 'admin.maintenance-tickets.index', 'routes' => 'admin.maintenance-tickets.*', 'icon' => 'wrench'],
             ],
         ],
         [
@@ -22,13 +31,11 @@
             ],
         ],
         [
-            'heading' => 'Requests',
+            'heading' => 'Records',
             'links' => [
-                ['label' => 'All Requests', 'route' => 'admin.forms.facilities.index', 'routes' => 'admin.forms.facilities.*', 'icon' => 'approve'],
-                ['label' => 'Repair & maintenance', 'route' => 'admin.maintenance-tickets.index', 'routes' => 'admin.maintenance-tickets.*', 'icon' => 'wrench'],
-                ['label' => 'Reservations', 'route' => 'admin.bookings.index', 'routes' => ['admin.bookings.index'], 'icon' => 'bookmark'],
-                ['label' => 'Create Direct Reservation', 'route' => 'admin.bookings.create-direct', 'routes' => ['admin.bookings.create-direct'], 'icon' => 'edit'],
-                ['label' => 'Reservation calendar', 'route' => 'admin.calendar', 'icon' => 'calendar'],
+                ['label' => 'Record overview', 'route' => 'admin.monthly-records.index', 'icon' => 'records'],
+                ['label' => 'Repair records', 'route' => 'admin.repair-records.index', 'icon' => 'chart'],
+                ['label' => 'Audit trail', 'route' => 'admin.audit-logs.index', 'icon' => 'records'],
             ],
         ],
         [
@@ -36,7 +43,6 @@
             'links' => [
                 ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users'],
                 ['label' => 'Create user', 'route' => 'admin.users.create', 'icon' => 'user-plus'],
-                ['label' => 'Audit trail', 'route' => 'admin.audit-logs.index', 'icon' => 'records'],
             ],
         ],
     ];

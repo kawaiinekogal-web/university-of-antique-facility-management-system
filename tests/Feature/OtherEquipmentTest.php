@@ -42,6 +42,29 @@ class OtherEquipmentTest extends TestCase
         ], $items->all());
     }
 
+    public function test_submitted_request_saves_add_item_rows_and_the_legacy_text_box(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        $facility = Facility::create(['name' => 'Equipment Save Hall', 'location' => 'Test Campus', 'owner_type' => 'gsu',
+            'is_active' => true, 'availability_status' => 'available']);
+
+        $this->post('/request-facility', [
+            'client_name' => 'Maria Jo', 'last_name' => 'Dela Cruz', 'contact_number' => '0917-123-4567',
+            'email' => 'equipment@example.test', 'organization' => 'Community Partner',
+            'noted_signatory_id' => 'custom', 'noted_signatory_custom' => 'Barangay Captain',
+            'street_address' => 'Purok 3', 'barangay' => 'Bahuyan', 'city_municipality' => 'Barbaza',
+            'province' => 'Antique', 'country' => 'Philippines',
+            'date_activity' => now()->addDays(40)->toDateString(), 'start_time' => '09:00', 'end_time' => '10:00',
+            'facility_ids' => [$facility->id], 'purpose' => 'Community assembly', 'number_of_persons' => 50,
+            'other_equipment' => [['name' => 'Projector screen', 'qty' => 2]],
+            'equipment_other' => 'Extension cords',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $payload = FormSubmission::where('payload->email', 'equipment@example.test')->firstOrFail()->payload;
+        $this->assertSame([['name' => 'Projector screen', 'qty' => 2], ['name' => 'Extension cords', 'qty' => 1]], $payload['equipment_others']);
+        $this->assertSame(['Projector screen', 'Extension cords'], FormSubmission::equipmentItems($payload)->pluck('label')->all());
+    }
+
     public function test_other_equipment_rules_reject_bad_quantities_and_too_many_rows(): void
     {
         $rules = FormSubmission::OTHER_EQUIPMENT_RULES;

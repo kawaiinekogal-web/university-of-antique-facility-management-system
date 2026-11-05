@@ -7,7 +7,7 @@
     $autoOpen = $autoOpen ?? false;
     $showUrl  = $showUrl ?? null;
     // Ticket code: FM-<year submitted>-<request no.>, the format the landing page tracker takes
-    $ticketNo = 'FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-' . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT);
+    $ticketNo = $submission->ticket_code;
 
     $statusMeta = [
         'pending'         => ['Pending review',         'is-warn', 'GSU will review your request. You\'ll get a notification when it\'s approved.'],

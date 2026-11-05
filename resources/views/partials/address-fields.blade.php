@@ -1,16 +1,12 @@
 <div class="address-fields" data-address-fields data-provinces-url="{{ route('addresses.provinces') }}" data-cities-url="{{ url('/api/addresses/cities') }}" data-barangays-url="{{ url('/api/addresses/barangays') }}">
-    <div class="pk-field">
-        <label class="pk-label" for="street_address">Street address <span class="pk-req">*</span></label>
-        <input type="text" name="street_address" id="street_address" required maxlength="255" autocomplete="street-address" class="pk-input" value="{{ old('street_address') }}" placeholder="House/building number, street, sitio">
-        @error('street_address')<p class="pr-err">{{ $message }}</p>@enderror
-    </div>
-    <div class="pk-grid-2 u-mt-14">
+    <div class="pk-grid-2">
         <div class="pk-field">
             <label class="pk-label" for="province">Province <span class="pk-req">*</span></label>
             <select name="province" id="province" required class="pk-input" data-address-province>
                 <option value="">Loading provinces…</option>
             </select>
             <input type="hidden" name="province_code" id="province_code" data-address-province-code value="{{ old('province_code') }}">
+            <p class="pk-help">Western Visayas (Region VI) only.</p>
             @error('province')<p class="pr-err">{{ $message }}</p>@enderror
         </div>
         <div class="pk-field">
@@ -38,6 +34,11 @@
             </select>
             @error('country')<p class="pr-err">{{ $message }}</p>@enderror
         </div>
+    </div>
+    <div class="pk-field u-mt-14">
+        <label class="pk-label" for="street_address">Street address <span class="pk-req">*</span></label>
+        <input type="text" name="street_address" id="street_address" required maxlength="255" autocomplete="street-address" class="pk-input" value="{{ old('street_address') }}" placeholder="House/building number, street, sitio">
+        @error('street_address')<p class="pr-err">{{ $message }}</p>@enderror
     </div>
 </div>
 <script>

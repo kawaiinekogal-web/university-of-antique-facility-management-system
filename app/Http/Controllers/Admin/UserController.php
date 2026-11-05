@@ -20,6 +20,12 @@ class UserController extends Controller
     /** Holds every walk-in guest request; this system account must remain active. */
     private const SYSTEM_EMAIL = 'walk-in-guest@ua-fms.local';
 
+    /** Admin-team roles; college, org and guest accounts are not limited. */
+    private const TEAM_ROLES = ['admin', 'facility_staff', 'maintenance_staff'];
+
+    /** Active admin-team accounts allowed besides the original admin account. */
+    public const MAX_ADDED_STAFF = 5;
+
     public function index()
     {
         $users = User::orderBy('name')->paginate(20);
@@ -38,7 +44,11 @@ class UserController extends Controller
 
         $adminTeam = User::whereIn('role', ['admin', 'facility_staff', 'maintenance_staff'])->orderBy('name')->get();
 
-        return view('admin.users.index', compact('users', 'history', 'adminTeam') + ['systemEmail' => self::SYSTEM_EMAIL]);
+        return view('admin.users.index', compact('users', 'history', 'adminTeam') + [
+            'systemEmail' => self::SYSTEM_EMAIL,
+            'staffSeatsLeft' => $this->staffSeatsLeft(),
+            'maxStaff' => self::MAX_ADDED_STAFF,
+        ]);
     }
 
     public function create()
@@ -50,6 +60,10 @@ class UserController extends Controller
     {
         $validated = $request->validated();
         $validated['role'] = $this->resolveRole($validated);
+
+        if (in_array($validated['role'], self::TEAM_ROLES, true) && $this->staffSeatsLeft() === 0) {
+            return $this->staffLimitReached();
+        }
 
         $data = [
             'name'     => $validated['name'],
@@ -99,18 +113,28 @@ class UserController extends Controller
             'password'          => ['nullable', 'string', 'confirmed', Password::min(8)->max(94)->mixedCase()->symbols()],
             // You can't take away your own admin access (you'd be locked out of this page)
             'role'              => $isSelf ? 'required|in:admin' : 'required|in:admin,college_staff,org_staff,guest',
-            'college_name'      => 'nullable|string|max:255',
-            'organization_name' => 'nullable|string|max:255',
+            'college_name'      => 'nullable|required_if:role,college_staff|string|max:255',
+            'organization_name' => 'nullable|required_if:role,org_staff|string|max:255',
             'position'          => 'nullable|string|max:120',
             'admin_access'      => 'nullable|in:full,facility_staff,maintenance_staff',
         ], [
             'contact_number.regex' => 'Enter an 11-digit contact number in the format 09xx-xxx-xxxx.',
             'role.in'              => $isSelf ? 'You can\'t change the role of your own account.' : 'Choose a valid role.',
+            'college_name.required_if'      => 'Enter the college name. College staff requests are filed under it.',
+            'organization_name.required_if' => 'Enter the organization name. Organization requests are filed under it.',
         ]);
 
         // Your own account stays a full admin (you'd be locked out of this page)
         if (! $isSelf) {
             $validated['role'] = $this->resolveRole($validated);
+        }
+
+        // Moving an active college/org/guest account onto the admin team takes a staff slot
+        $joinsTeam = $user->is_active
+            && ! in_array($user->role, self::TEAM_ROLES, true)
+            && in_array($validated['role'], self::TEAM_ROLES, true);
+        if ($joinsTeam && $this->staffSeatsLeft() === 0) {
+            return $this->staffLimitReached();
         }
 
         $user->name           = $validated['name'];
@@ -140,6 +164,25 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('status', 'Account updated for ' . $user->name . '.');
+    }
+
+    /** How many more admin-team accounts can be added; deactivated accounts free their slot. */
+    private function staffSeatsLeft(): int
+    {
+        $originalAdminId = User::where('role', 'admin')->min('id');
+        $added = User::whereIn('role', self::TEAM_ROLES)->where('is_active', true)
+            ->when($originalAdminId, fn ($q) => $q->whereKeyNot($originalAdminId))
+            ->count();
+
+        return max(0, self::MAX_ADDED_STAFF - $added);
+    }
+
+    private function staffLimitReached()
+    {
+        return back()->withInput()->withErrors([
+            'role' => 'The admin team already has the maximum of ' . self::MAX_ADDED_STAFF
+                . ' staff accounts. Deactivate one to add someone else. College, organization and guest accounts are not limited.',
+        ]);
     }
 
     /** Facilities and Repair & Maintenance are access levels under Admin: the form sends role=admin plus admin_access. */

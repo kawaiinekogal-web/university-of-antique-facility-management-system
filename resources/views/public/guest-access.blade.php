@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
 @section('title', 'Guest Access – UA Facility Management System')
+{{-- Guest pages carry their own Back / Venue rates links, so the site's top bar is hidden --}}
+@section('no-public-header', true)
 
 @section('main-content-class', 'w-full')
-
-@section('no-public-header', true)
 
 @section('content')
 @php

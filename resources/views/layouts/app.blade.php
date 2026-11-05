@@ -24,6 +24,12 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-white text-black antialiased">
+@php
+    // Portal pages (sidebar shell) put #main-content on their content area, past the sidebar; other pages on <main>
+    $isPortalPage = View::hasSection('admin-content') || View::hasSection('college-content') || View::hasSection('org-content');
+@endphp
+{{-- First stop for keyboard users: jump past the navigation --}}
+<a href="#main-content" class="skip-link">Skip to main content</a>
 <div class="flex min-h-screen flex-col">
     {{-- Pages can opt out of the public top bar with @section('no-public-header', true) (e.g. Guest Access) --}}
     @if (!request()->routeIs('login') && !auth()->check() && !View::hasSection('no-public-header'))
@@ -31,7 +37,7 @@
     @endif
 
 
-    <main class="flex-1">
+    <main class="flex-1" @unless ($isPortalPage) id="main-content" tabindex="-1" @endunless>
         {{-- Flash messages pop up as a toast (success closes after 5 seconds) --}}
         @include('layouts.partials.flash-toast')
 

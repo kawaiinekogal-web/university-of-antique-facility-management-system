@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\VenueRates;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -132,6 +133,76 @@ class FormSubmission extends Model
         $this->save();
     }
 
+    /** Staff wording for each guest payment step; the public tracker words the same steps for the guest. */
+    public const PAYMENT_LABELS = [
+        'pending_payment'  => 'Awaiting receipt',
+        'payment_uploaded' => 'Receipt to verify',
+        'payment_verified' => 'Payment verified',
+    ];
+
+    /** Ticket code the requester tracks: FM-<year submitted>-<request no.>, the format the landing page tracker takes. */
+    public function getTicketCodeAttribute(): string
+    {
+        return 'FM-' . ($this->created_at?->format('Y') ?? now()->format('Y')) . '-' . str_pad((string) $this->id, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Venue rental from the published VenueRates: each venue's daily rate × days booked; per-head venues
+     * (classrooms, "PhP 50.00/head in a day") are rate × number of persons × days, with the persons as the quantity.
+     * Used by the approved application PDF and the public tracker, so both show the same amount. A venue without a
+     * published rate ("rate set by GSU"), or a per-head venue with no number of persons, makes the quote incomplete.
+     *
+     * @return array{facilities: Collection, days: int, hours: ?float, rows: array, total: float, complete: bool}
+     */
+    public function rentalQuote(): array
+    {
+        $payload = $this->payload ?? [];
+        $facilityIds = $payload['facility_ids'] ?? (isset($payload['facility_id']) ? [$payload['facility_id']] : []);
+        $facilitiesById = Facility::whereIn('id', $facilityIds)->get()->keyBy('id');
+        $facilities = collect($facilityIds)->map(fn ($id) => $facilitiesById->get($id))->filter()->values();
+
+        $startDate = $payload['date_activity'] ?? '';
+        $endDate = $payload['date_end'] ?? $startDate;
+        $days = $startDate ? max(1, Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1) : 1;
+        $timeRange = $payload['time_range'] ?? [];
+        $hours = ! empty($timeRange['start']) && ! empty($timeRange['end'])
+            ? round(Carbon::parse('2000-01-01 ' . $timeRange['start'])->diffInMinutes(Carbon::parse('2000-01-01 ' . $timeRange['end'])) / 60, 2)
+            : null;
+
+        $persons = isset($payload['number_of_persons']) ? (int) $payload['number_of_persons'] : null;
+        $rows = $facilities->map(function (Facility $facility) use ($days, $hours, $persons) {
+            $rate = VenueRates::rateFor($facility->name);
+            $perHead = VenueRates::isPerHead($facility->name);
+            $daily = VenueRates::dailyFeeFor($facility->name, $persons);
+
+            return [
+                'name' => $facility->name,
+                'quantity' => $perHead ? ($persons ? (string) $persons : '') : '1',
+                'rate' => $rate,
+                'days' => (string) $days,
+                'hours' => $hours === null ? '' : rtrim(rtrim(number_format($hours, 2, '.', ''), '0'), '.'),
+                'total' => $daily === null ? null : $daily * $days,
+            ];
+        })->all();
+
+        return [
+            'facilities' => $facilities,
+            'days' => $days,
+            'hours' => $hours,
+            'rows' => $rows,
+            'total' => collect($rows)->sum(fn (array $row) => $row['total'] ?? 0),
+            'complete' => $rows !== [] && collect($rows)->every(fn (array $row) => $row['total'] !== null),
+        ];
+    }
+
+    /** Payment step label for approved guest requests, or null when no payment is involved. */
+    public function paymentLabel(): ?string
+    {
+        return $this->requester_type === 'guest' && in_array($this->status, ['approved', 'reserved'], true)
+            ? (self::PAYMENT_LABELS[$this->payment_status] ?? null)
+            : null;
+    }
+
     /** Display values for the facility request ticket (pop-up and downloaded PDF). */
     /** Validation for the free-text "Other equipment" rows every request form submits. */
     public const OTHER_EQUIPMENT_RULES = [
@@ -177,8 +248,7 @@ class FormSubmission extends Model
     public function ticketData(): array
     {
         $p = $this->payload ?? [];
-        // Ticket code: FM-<year submitted>-<request no.>, the format the landing page tracker takes
-        $ticketNo = 'FM-' . ($this->created_at?->format('Y') ?? now()->format('Y')) . '-' . str_pad((string) $this->id, 5, '0', STR_PAD_LEFT);
+        $ticketNo = $this->ticket_code;
 
         $statusMeta = [
             'pending'         => ['Pending review',         'is-warn', 'GSU will review your request. You\'ll get a notification when it\'s approved.'],

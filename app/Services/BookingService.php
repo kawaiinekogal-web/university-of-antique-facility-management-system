@@ -48,8 +48,16 @@ class BookingService
             return 'Incomplete date/time or facility information in the submission.';
         }
 
-        if (Carbon::parse($dateActivity)->lessThan(now()->addDays(30)->startOfDay())) {
-            return 'Date of activity is less than 30 days away.';
+        // The 30-day notice rule was checked when the request was submitted (StoreFacilitiesUtilizationRequest);
+        // re-checking it against "today" would block every request reviewed a day or more later. At approval,
+        // only refuse requests whose notice from the submission date fell short, or whose date has already passed.
+        $activityDay = Carbon::parse($dateActivity)->startOfDay();
+        if ($activityDay->lt(now()->startOfDay())) {
+            return 'Date of activity has already passed.';
+        }
+        $submittedOn = ($submission->created_at ?? now())->copy()->startOfDay();
+        if ($activityDay->lt($submittedOn->copy()->addDays(30))) {
+            return 'Date of activity was less than 30 days after the request was submitted.';
         }
 
         $facilitiesById = Facility::whereIn('id', $facilityIds)->get()->keyBy('id');

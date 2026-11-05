@@ -49,10 +49,14 @@ class FormSubmissionController extends Controller
             $query->whereRaw('JSON_UNQUOTE(JSON_EXTRACT(payload, \'$.date_activity\')) LIKE ?', [$request->input('month') . '%']);
         }
 
-        // Search by control number
+        // Search by the requester's ticket code (FM-<year>-<no.>) or by control number
         if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->whereRaw('JSON_EXTRACT(payload, \'$.control_no\') LIKE ?', ['%' . $search . '%']);
+            $search = trim((string) $request->input('search'));
+            if (preg_match('/^FM-(\d{4})-(\d{1,10})$/i', preg_replace('/\s+/', '', $search), $m)) {
+                $query->whereKey((int) $m[2])->whereYear('created_at', (int) $m[1]);
+            } else {
+                $query->whereRaw('JSON_EXTRACT(payload, \'$.control_no\') LIKE ?', ['%' . $search . '%']);
+            }
         }
 
         // Sort: control number A-Z (pending requests first without control no), then by date

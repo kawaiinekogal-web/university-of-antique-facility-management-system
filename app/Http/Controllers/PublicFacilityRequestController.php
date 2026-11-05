@@ -39,16 +39,6 @@ class PublicFacilityRequestController extends Controller
 
     public function store(StoreFacilitiesUtilizationRequest $request)
     {
-        if ($request->filled('address') && ! $request->filled('street_address')) {
-            $request->merge([
-                'street_address' => $request->input('address'),
-                'barangay' => 'Not provided',
-                'city_municipality' => 'Not provided',
-                'province' => 'Not provided',
-                'country' => 'Philippines',
-            ]);
-        }
-
         // Spam trap: real visitors never see or fill the "website" field
         if ($request->filled('website')) {
             return redirect()->route('public.request.create');
@@ -62,7 +52,7 @@ class PublicFacilityRequestController extends Controller
             'street_address'         => 'required|string|max:255',
             'barangay'               => 'required|string|max:120',
             'city_municipality'      => 'required|string|max:120',
-            'province'               => 'required|string|max:120',
+            'province'               => ['required', 'string', 'max:120', \Illuminate\Validation\Rule::in(AddressLookupController::PROVINCES)],
             'country'                => ['required', 'string', 'max:80', \Illuminate\Validation\Rule::in(['Philippines'])],
             'organization'           => 'required|string|max:160',
             'noted_signatory_id'     => 'required|in:custom',
@@ -75,16 +65,12 @@ class PublicFacilityRequestController extends Controller
         );
 
         // File the request under the walk-in account for this request only (nobody is signed in)
-        $lastId = (int) FormSubmission::max('id');
         Auth::setUser($walkIn);
         $this->handleStoreFacilities($request);
         session()->forget('status'); // the ticket page replaces the generic "submitted" toast
 
-        $submission = FormSubmission::where('requester_id', $walkIn->id)
-            ->where('type', 'facilities_utilization')
-            ->where('id', '>', $lastId)
-            ->latest('id')
-            ->firstOrFail();
+        // The exact row just created: every guest shares the walk-in account, so "latest" could be someone else's
+        $submission = $this->storedSubmission;
 
         // Save who actually asked (the shared submit code only knows the walk-in account)
         $payload = $submission->payload ?? [];

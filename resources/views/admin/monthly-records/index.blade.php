@@ -2,9 +2,7 @@
 
 @section('admin-content')
 @php
-    $periodStart  = \Carbon\Carbon::create((int) $year, (int) $month, 1);
-    $prevPeriod   = $periodStart->copy()->subMonth();
-    $nextPeriod   = $periodStart->copy()->addMonth();
+    $periodNoun   = ['daily' => 'day', 'weekly' => 'week', 'monthly' => 'month'][$period];
     $bookingCount = $records->count();
     $venuesUsed   = $venueSummary->filter(fn ($c) => $c > 0)->count();
     $busiestVenue = $venueSummary->filter(fn ($c) => $c > 0)->sortDesc()->keys()->first();
@@ -14,22 +12,31 @@
 <div class="records-page">
     <section class="records-hero" style="--records-hero-image: url('{{ asset('img/facilities/paghiusa-hall.jpg') }}')">
         <div>
-            <p class="records-eyebrow">Monthly Records</p>
+            <p class="records-eyebrow">{{ ucfirst($period) }} Report</p>
             <div class="records-period">
-                <a class="records-step" href="{{ route('admin.monthly-records.index', ['month' => $prevPeriod->month, 'year' => $prevPeriod->year]) }}" aria-label="Previous month: {{ $prevPeriod->format('F Y') }}" title="{{ $prevPeriod->format('F Y') }}">
+                <a class="records-step" href="{{ route('admin.monthly-records.index', $prevQuery) }}" aria-label="Previous {{ $periodNoun }}: {{ $prevLabel }}" title="{{ $prevLabel }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <h1>{{ $periodStart->format('F Y') }}</h1>
-                <a class="records-step" href="{{ route('admin.monthly-records.index', ['month' => $nextPeriod->month, 'year' => $nextPeriod->year]) }}" aria-label="Next month: {{ $nextPeriod->format('F Y') }}" title="{{ $nextPeriod->format('F Y') }}">
+                <h1>{{ $periodLabel }}</h1>
+                <a class="records-step" href="{{ route('admin.monthly-records.index', $nextQuery) }}" aria-label="Next {{ $periodNoun }}: {{ $nextLabel }}" title="{{ $nextLabel }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
                 </a>
             </div>
-            <p class="records-hero-sub">Facility bookings, equipment, rental fees and occupancy for the month.</p>
+            <p class="records-hero-sub">Facility bookings, equipment, rental fees and occupancy for the {{ $periodNoun }}.</p>
         </div>
 
         <div class="records-tools">
-            <!-- Month/Year Filter -->
+            <!-- Report type + period filter -->
             <form method="GET" action="{{ route('admin.monthly-records.index') }}" class="records-filter">
+                <div>
+                    <label for="records-period">Report</label>
+                    <select id="records-period" name="period" onchange="this.form.submit()">
+                        @foreach(['monthly' => 'Monthly', 'weekly' => 'Weekly', 'daily' => 'Daily'] as $value => $text)
+                            <option value="{{ $value }}" {{ $period === $value ? 'selected' : '' }}>{{ $text }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                @if($period === 'monthly')
                 <div>
                     <label for="records-month">Month</label>
                     <select id="records-month" name="month">
@@ -43,16 +50,23 @@
                 <div>
                     <label for="records-year">Year</label>
                     <select id="records-year" name="year">
-                        @foreach(range(2024, 2030) as $y)
+                        {{-- Always includes the year being viewed (the report accepts 2000-2100) --}}
+                        @foreach(range(min(2024, (int) $year), max((int) now()->year + 3, (int) $year)) as $y)
                             <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
                         @endforeach
                     </select>
                 </div>
+                @else
+                <div>
+                    <label for="records-date">{{ $period === 'weekly' ? 'Week of' : 'Date' }}</label>
+                    <input id="records-date" type="date" name="date" value="{{ $reportDate }}" min="2000-01-01" max="2100-12-31">
+                </div>
+                @endif
                 <button type="submit">View</button>
             </form>
-            <a href="{{ route('admin.monthly-records.export', ['month' => $month, 'year' => $year]) }}" class="records-print">
+            <a href="{{ route('admin.monthly-records.export', $period === 'monthly' ? ['period' => $period, 'month' => $month, 'year' => $year] : ['period' => $period, 'date' => $reportDate]) }}" class="records-print">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
-                Export chart data
+                Download Excel
             </a>
             <button type="button" onclick="window.print()" class="records-print">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>
@@ -62,11 +76,11 @@
     </section>
 
     <!-- Key figures -->
-    <section class="records-stats" aria-label="Key figures for {{ $periodStart->format('F Y') }}">
+    <section class="records-stats" aria-label="Key figures for {{ $periodLabel }}">
         <div class="records-stat is-dark">
             <p class="records-stat-label">Bookings</p>
             <p class="records-stat-value">{{ $bookingCount }}</p>
-            <p class="records-stat-hint">Reserved this month</p>
+            <p class="records-stat-hint">Reserved this {{ $periodNoun }}</p>
         </div>
         <div class="records-stat">
             <p class="records-stat-label">Estimated rental fees</p>
@@ -92,90 +106,102 @@
         <div class="records-charts">
             <!-- Monthly Trend Chart -->
             <div class="records-card">
-                <h3>Booking Trend (Last 12 Months)</h3>
+                <h3>Booking Trend <span class="records-card-sub">{{ $trendLabel }}</span></h3>
                 <div class="records-chart"><canvas id="monthlyTrendChart"></canvas></div>
             </div>
 
             <!-- Facility Usage Chart -->
             <div class="records-card">
-                <h3>Facility Usage ({{ date('F Y', mktime(0, 0, 0, $month, 1, $year)) }})</h3>
+                <h3>Facility Usage ({{ $periodLabel }})</h3>
                 <div class="records-chart"><canvas id="facilityUsageChart"></canvas></div>
             </div>
         </div>
 
         <h2 class="records-section-title">Booking ledger</h2>
+        {{-- Print-only gold banner, as on the paper report --}}
+        <div class="records-print-banner">{{ mb_strtoupper($period === 'monthly' ? $periodLabel : "{$period} report: {$periodLabel}") }}</div>
+        @php
+            $equipmentCols = ['chairs' => 'Chairs', 'tables' => 'Long Tables', 'fans' => 'Electric Fan', 'rostrum' => 'Rostrum', 'flags' => 'Flag', 'led' => 'Led Wall', 'sound' => 'Sound'];
+        @endphp
         @if($records->count() > 0)
             <div class="records-table-wrap">
-            <table class="w-full border-2 border-black text-xs">
-                <thead class="text-white u-bg-ink">
+            <table class="records-ledger">
+                <thead>
                     <tr>
-                        <th class="border border-black px-2 py-2 text-left">Date Requested</th>
-                        <th class="border border-black px-2 py-2 text-left">Date of Activity</th>
-                        <th class="border border-black px-2 py-2 text-left">Time</th>
-                        <th class="border border-black px-2 py-2 text-left">Purpose</th>
-                        <th class="border border-black px-2 py-2 text-left">Requester</th>
-                        <th class="border border-black px-2 py-2 text-left">Contact No.</th>
-                        <th class="border border-black px-2 py-2 text-left">Venue</th>
-                        <th colspan="7" class="border border-black px-2 py-2 text-center u-bg-slate-800">Facilities to be Used (Quantity)</th>
-                        <th class="border border-black px-2 py-2 text-right">Rental Fee</th>
+                        <th rowspan="2" class="is-formno">Form No.</th>
+                        <th rowspan="2">Date Requested</th>
+                        <th rowspan="2">Date of Activity</th>
+                        <th rowspan="2">Time of Activity</th>
+                        <th rowspan="2" class="is-purpose">Purpose</th>
+                        <th rowspan="2">Requester</th>
+                        <th rowspan="2">Contact Number</th>
+                        <th rowspan="2">Venue</th>
+                        <th colspan="{{ count($equipmentCols) }}" class="is-group">Facilities to be used <span>(qty.)</span></th>
+                        <th rowspan="2">Remarks</th>
                     </tr>
                     <tr>
-                        <th colspan="7" class="border border-black"></th>
-                        <th class="border border-black px-2 py-1 text-center text-xs">Chairs</th>
-                        <th class="border border-black px-2 py-1 text-center text-xs">Tables</th>
-                        <th class="border border-black px-2 py-1 text-center text-xs">Fans</th>
-                        <th class="border border-black px-2 py-1 text-center text-xs">Rostrum</th>
-                        <th class="border border-black px-2 py-1 text-center text-xs">Flags</th>
-                        <th class="border border-black px-2 py-1 text-center text-xs">Sound</th>
-                        <th class="border border-black px-2 py-1 text-center text-xs">LED</th>
-                        <th class="border border-black"></th>
+                        @foreach($equipmentCols as $label)
+                            <th class="is-qty">{{ $label }}</th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($records as $record)
-                        <tr class="hover:bg-gray-50">
-                            <td class="border border-black px-2 py-2">{{ $record['date_requested'] }}</td>
-                            <td class="border border-black px-2 py-2">{{ $record['date_of_activity'] }}</td>
-                            <td class="border border-black px-2 py-2">{{ $record['time'] }}</td>
-                            <td class="border border-black px-2 py-2">{{ Str::limit($record['purpose'], 40) }}</td>
-                            <td class="border border-black px-2 py-2">{{ $record['requester'] }}</td>
-                            <td class="border border-black px-2 py-2">{{ $record['contact_no'] }}</td>
-                            <td class="border border-black px-2 py-2 font-semibold">{{ $record['venue'] }}</td>
-                            <td class="border border-black px-2 py-2 text-center">{{ $record['equipment']['chairs'] > 0 ? $record['equipment']['chairs'] : '-' }}</td>
-                            <td class="border border-black px-2 py-2 text-center">{{ $record['equipment']['tables'] > 0 ? $record['equipment']['tables'] : '-' }}</td>
-                            <td class="border border-black px-2 py-2 text-center">{{ $record['equipment']['fans'] > 0 ? $record['equipment']['fans'] : '-' }}</td>
-                            <td class="border border-black px-2 py-2 text-center">{{ $record['equipment']['rostrum'] > 0 ? $record['equipment']['rostrum'] : '-' }}</td>
-                            <td class="border border-black px-2 py-2 text-center">{{ $record['equipment']['flags'] > 0 ? $record['equipment']['flags'] : '-' }}</td>
-                            <td class="border border-black px-2 py-2 text-center">{{ $record['equipment']['sound'] > 0 ? $record['equipment']['sound'] : '-' }}</td>
-                            <td class="border border-black px-2 py-2 text-center">{{ $record['equipment']['led'] > 0 ? $record['equipment']['led'] : '-' }}</td>
-                            <td class="border border-black px-2 py-2 text-right font-semibold">
+                        <tr>
+                            <td class="is-formno"></td>
+                            <td>{{ $record['date_requested'] }}</td>
+                            <td>{{ $record['date_of_activity'] }}</td>
+                            <td class="u-nowrap">{{ $record['time'] }}</td>
+                            <td class="is-purpose">
+                                {{ $record['purpose'] }}
                                 @if($record['rental_fee'] > 0)
-                                    ₱{{ number_format($record['rental_fee'], 2) }}
-                                @else
-                                    -
+                                    <strong><em>(Rental Fee: PhP{{ number_format($record['rental_fee'], 2) }})</em></strong>
                                 @endif
                             </td>
+                            <td class="is-center">{{ $record['requester'] }}</td>
+                            <td class="is-center">{{ $record['contact_no'] }}</td>
+                            <td class="is-center">{{ $record['venue'] }}</td>
+                            @foreach($equipmentCols as $key => $label)
+                                <td class="is-qty">{{ $record['equipment'][$key] > 0 ? $record['equipment'][$key] : '' }}</td>
+                            @endforeach
+                            <td>{{ $record['remarks'] }}</td>
                         </tr>
                     @endforeach
                 </tbody>
-                <tfoot class="bg-gray-100 font-bold">
-                    <tr>
-                        <td colspan="14" class="border border-black px-2 py-2 text-right">TOTAL RENTAL FEES:</td>
-                        <td class="border border-black px-2 py-2 text-right text-lg">₱{{ number_format($totalRentalFees, 2) }}</td>
-                    </tr>
-                </tfoot>
             </table>
             </div>
         @else
             <div class="records-empty">
-                <p>No bookings found for {{ date('F Y', mktime(0, 0, 0, $month, 1, $year)) }}</p>
+                <p>No bookings found for {{ $periodLabel }}</p>
             </div>
         @endif
+
+        {{-- Print-only footer: venue summary chart, rental total, signatories --}}
+        @php
+            $summaryLabel = $period === 'monthly' ? \Carbon\Carbon::create($year, $month, 1)->format('F, Y') : $periodLabel;
+        @endphp
+        <div class="records-print-summary">
+            <h3>Summary of Venues/Facilities Utilized as of {{ $summaryLabel }}</h3>
+            <canvas id="venueSummaryPrintChart" width="1100" height="380" role="img" aria-label="Bookings per venue, {{ $summaryLabel }}"></canvas>
+            <p class="records-print-rental"><em>Rental of Venues:</em> <strong><em>PhP{{ number_format($totalRentalFees, 2) }}</em></strong></p>
+            <div class="records-print-signs">
+                <div>
+                    <p class="records-print-sign-label">Prepared by:</p>
+                    <p class="records-print-sign-name">{{ mb_strtoupper(auth()->user()->name) }}</p>
+                    <p>{{ auth()->user()->position ?: 'GSU Administrator' }}</p>
+                </div>
+                <div>
+                    <p class="records-print-sign-label">Noted by:</p>
+                    <p class="records-print-sign-name">&nbsp;</p>
+                    <p>Name / Position</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Venue Usage Summary -->
     <div>
-        <h3 class="records-section-title">Venues utilized · {{ date('F Y', mktime(0, 0, 0, $month, 1, $year)) }}</h3>
+        <h3 class="records-section-title">Venues utilized · {{ $periodLabel }}</h3>
         @php
             $maxVenueCount = max(1, (int) $allVenues->max());
         @endphp
@@ -192,8 +218,8 @@
 
     <!-- Facility occupancy (formerly the Monthly overview page) -->
     <div class="records-occupancy">
-        <h3 class="records-section-title">Facility occupancy · {{ date('F Y', mktime(0, 0, 0, $month, 1, $year)) }}</h3>
-        <p class="records-note">Utilization is booked hours ÷ {{ number_format($calendarHours, 0) }} calendar hours this month. Operating hours are not configured.</p>
+        <h3 class="records-section-title">Facility occupancy · {{ $periodLabel }}</h3>
+        <p class="records-note">Utilization is booked hours ÷ {{ number_format($calendarHours, 0) }} operating hours this {{ $periodNoun }} ({{ $periodDays }} {{ \Illuminate\Support\Str::plural('day', $periodDays) }} × 13 hours, 6:00 AM–7:00 PM).</p>
         <div class="pk-table-wrap">
             <table class="pk-table">
                 <thead><tr><th>Facility</th><th class="u-text-right">Booked hours</th><th class="u-text-right">Utilization</th></tr></thead>
@@ -252,6 +278,36 @@ new Chart(document.getElementById('monthlyTrendChart'), {
             }
         }
     }
+});
+
+// Print-only venue summary (fixed size so it renders while hidden on screen)
+const printVenues = @json($allVenues->sortKeys());
+const printPalette = ['#F4B183', '#9DC3E6', '#FFD966', '#A9D18E', '#C9C9C9', '#5B9BD5', '#ED7D31', '#BF9000', '#70AD47', '#4472C4', '#A5A5A5', '#FFC000'];
+new Chart(document.getElementById('venueSummaryPrintChart'), {
+    type: 'bar',
+    data: {
+        labels: Object.keys(printVenues),
+        datasets: [{ data: Object.values(printVenues), backgroundColor: Object.keys(printVenues).map((_, i) => printPalette[i % printPalette.length]) }]
+    },
+    options: {
+        responsive: false,
+        animation: false,
+        layout: { padding: { top: 18 } },
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, suggestedMax: Math.max(...Object.values(printVenues), 0) + 2, ticks: { stepSize: 2 } }, x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } } }
+    },
+    plugins: [{
+        id: 'valueLabels',
+        afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            ctx.save();
+            ctx.font = '600 12px Calibri, Arial, sans-serif';
+            ctx.fillStyle = '#000';
+            ctx.textAlign = 'center';
+            chart.getDatasetMeta(0).data.forEach((bar, i) => ctx.fillText(chart.data.datasets[0].data[i], bar.x, bar.y - 6));
+            ctx.restore();
+        }
+    }]
 });
 
 // Facility Usage Chart

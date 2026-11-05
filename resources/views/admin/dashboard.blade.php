@@ -43,7 +43,7 @@
       </a>
       <a href="{{ route('admin.bookings.create-direct') }}" class="dash-hero-btn ghost">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        New reservation
+        Create direct reservation
       </a>
       @endif
     </div>
@@ -178,7 +178,7 @@
         <canvas id="reservationsMonthlyChart" aria-label="Reservations per month in {{ $year }}" role="img"></canvas>
       </div>
       <div class="dash-card-foot">
-        <p>Reservations in {{ $year }}: <strong>{{ array_sum($reservationsByMonth) }}</strong> · <a href="{{ route('admin.monthly-records.index', ['year' => $year]) }}">Monthly records</a></p>
+        <p>Reservations in {{ $year }}: <strong>{{ array_sum($reservationsByMonth) }}</strong> · <a href="{{ route('admin.monthly-records.index', ['year' => $year]) }}">Record overview</a></p>
       </div>
     </div>
     @endif
@@ -310,8 +310,8 @@ new Chart(document.getElementById('reservationsMonthlyChart'), {
     options: monthlyOptions(false)
 });
 
-// Facilities Requests donut (Plotly). Categorical slots 1–5 of the validated palette, in fixed order;
-// slices keep visible labels because three slots sit below 3:1 contrast on white.
+// Facilities Requests donut (Plotly), fixed status order; the legend names every slice because the
+// lighter slate steps sit below 3:1 contrast on white.
 const facilitiesTotal = {{ (int) $facilitiesStats['total'] }};
 const facilitiesData = [{
     values: [
@@ -334,15 +334,20 @@ const facilitiesData = [{
     sort: false,
     direction: 'clockwise',
     marker: {
-        colors: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4'],
+        // Monochrome by client brief: one slate step per status, darker as a request moves toward Reserved;
+        // Disapproved is the lightest (closed). Order = values above.
+        colors: ['#94A3B8', '#64748B', '#334155', '#0f172a', '#CBD5E1'],
         line: { color: '#ffffff', width: 2 } // 2px surface gap between slices
     },
     textinfo: 'percent',
+    texttemplate: [], // filled below: empty slices get no "0%" label (they stacked on top of each other)
     textposition: 'outside',
     textfont: { family: 'Inter, sans-serif', size: 12, color: '#404040' },
     hovertemplate: '<b>%{label}</b> request(s)<br>%{percent} of total<extra></extra>',
     automargin: true
 }];
+
+facilitiesData[0].texttemplate = facilitiesData[0].values.map(v => (v > 0 ? '%{percent}' : ''));
 
 const facilitiesLayout = {
     height: 290,
@@ -375,7 +380,7 @@ new Chart(document.getElementById('repairMonthlyChart'), {
         labels: monthLabels,
         datasets: [
             { label: 'Received', data: @json(array_values($ticketsByMonth)), backgroundColor: '#334155', hoverBackgroundColor: '#0f172a', ...monthlyBar },
-            { label: 'Completed', data: @json(array_values($completedByMonth)), backgroundColor: '#1baf7a', hoverBackgroundColor: '#14845c', ...monthlyBar }
+            { label: 'Completed', data: @json(array_values($completedByMonth)), backgroundColor: '#94A3B8', hoverBackgroundColor: '#64748B', ...monthlyBar }
         ]
     },
     options: monthlyOptions(true)

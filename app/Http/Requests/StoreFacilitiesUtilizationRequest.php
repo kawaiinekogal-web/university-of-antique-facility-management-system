@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Facility;
 use App\Rules\OperatingHours;
 use App\Rules\PersonName;
+use App\Rules\WithinVenueCapacity;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -20,18 +21,12 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->filled('address') && ! $this->filled('street_address')) {
-            $this->merge([
-                'street_address' => $this->input('address'),
-                'barangay' => 'Not provided',
-                'city_municipality' => 'Not provided',
-                'province' => 'Not provided',
-                'country' => 'Philippines',
-            ]);
-        }
-
         if (! $this->routeIs('public.request.store') && $this->user()) {
             $this->merge(['last_name' => $this->user()->last_name]);
+        }
+        // College / org requests are filed under the account's unit name (requesterUnit())
+        if ($this->routeIs('college.requests.facilities.store', 'org.requests.facilities.store') && $this->user()) {
+            $this->merge(['account_unit' => $this->routeIs('college.*') ? $this->user()->college_name : $this->user()->organization_name]);
         }
 
         if (! $this->exists('facility_ids') && $this->filled('facility_id')) {
@@ -41,10 +36,11 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
 
     public function rules(): array
     {
-        $requiresAddress = $this->routeIs('public.request.store', 'guest.requests.facilities.store');
+        $requiresAddress = $this->routeIs('public.request.store');
 
         return [
             'last_name' => ['required', 'string', 'max:120', new PersonName],
+            'account_unit' => [Rule::requiredIf($this->user() && $this->routeIs('college.requests.facilities.store', 'org.requests.facilities.store')), 'nullable', 'string'],
             'date_activity' => 'required|date|after_or_equal:' . now()->addDays(30)->toDateString(),
             // Optional last day for multi-day events (same start/end time every day), up to 14 days in total
             'date_end'      => [
@@ -87,8 +83,9 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
             'street_address' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:255'],
             'barangay' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:120'],
             'city_municipality' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:120'],
-            'province' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:120'],
+            'province' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:120', Rule::in(\App\Http\Controllers\AddressLookupController::PROVINCES)],
             'country' => [Rule::requiredIf($requiresAddress), 'nullable', 'string', 'max:80', Rule::in(['Philippines'])],
+            'number_of_persons' => ['required', 'integer', 'min:1', 'max:100000', new WithinVenueCapacity($this->input('facility_ids'))],
             'qty_monobloc'  => 'nullable|integer|min:0',
             'qty_table'     => 'nullable|integer|min:0',
             'qty_fan'       => 'nullable|integer|min:0',
@@ -96,7 +93,8 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
             'qty_flag'      => 'nullable|integer|min:0',
             'qty_sound'     => 'nullable|integer|min:0',
             'qty_led'       => 'nullable|integer|min:0',
-            'equipment_other' => 'nullable|string|max:255',
+            'equipment_other' => 'nullable|string|max:255', // legacy single text box
+            ...\App\Models\FormSubmission::OTHER_EQUIPMENT_RULES,
             'venue_others'  => 'nullable|string|max:255',
 
             // Noted by (signatory)
@@ -125,7 +123,20 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'last_name.required' => 'Your account needs a separately recorded last name before you can submit a request. Ask your unit administrator to update your account.',
+            'facility_ids.required' => 'Select at least one venue.',
+            'date_activity.required' => 'Pick the date of the activity.',
+            'start_time.required' => 'Enter a start time.',
+            'end_time.required' => 'Enter an end time.',
+            'end_time.after' => 'The end time must be later than the start time.',
+            'purpose.required' => 'Describe what the venue will be used for.',
+            'number_of_persons.required' => 'Enter the number of persons attending.',
+            'account_unit.required' => $this->routeIs('college.*')
+                ? "Your account has no college name yet, so this request can't be filed. Ask the GSU administrator to add your college to your account."
+                : "Your account has no organization name yet, so this request can't be filed. Ask the GSU administrator to add your organization to your account.",
+            'province.in' => 'Requests are accepted from Western Visayas (Region VI) only: Aklan, Antique, Capiz, Guimaras, Iloilo or Negros Occidental.',
+            'last_name.required' => $this->routeIs('public.request.store')
+                ? 'Enter your last name exactly as you will type it in the status tracker.'
+                : 'Your account needs a separately recorded last name before you can submit a request. Ask your unit administrator to update your account.',
         ];
     }
 
@@ -179,6 +190,10 @@ class StoreFacilitiesUtilizationRequest extends FormRequest
             'date_end'      => 'end date',
             'payment_attachment' => 'payment receipt',
             'attachments.*' => 'supporting file',
+            'facility_ids' => 'venue', 'facility_ids.*' => 'venue', 'number_of_persons' => 'number of persons',
+            'city_municipality' => 'city/municipality', 'street_address' => 'street address',
+            'noted_signatory_id' => 'noted by', 'noted_signatory_custom' => 'noted by name',
+            'other_equipment.*.name' => 'other equipment name', 'other_equipment.*.qty' => 'other equipment quantity',
         ];
     }
 }

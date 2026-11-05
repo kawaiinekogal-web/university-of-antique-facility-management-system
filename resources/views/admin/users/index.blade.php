@@ -40,7 +40,7 @@
     {{-- Admin team: everyone with the Admin role (full or Repair & Maintenance access), with their GSU title --}}
     <div class="pk-section-head">
         <h2 class="pk-section-title">Admin team</h2>
-        <span class="pk-section-meta">{{ $adminTeam->count() }} {{ $adminTeam->count() === 1 ? 'member' : 'members' }}</span>
+        <span class="pk-section-meta">{{ $adminTeam->count() }} {{ $adminTeam->count() === 1 ? 'member' : 'members' }} · {{ $maxStaff - $staffSeatsLeft }} of {{ $maxStaff }} staff slots used</span>
     </div>
     <div class="adt-grid">
         @foreach ($adminTeam as $member)
@@ -57,13 +57,23 @@
                 </a>
             </article>
         @endforeach
-        <a href="{{ route('admin.users.create', ['role' => 'admin']) }}" class="adt-card adt-add">
-            <span class="adt-add-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0114 0M19 8v6M16 11h6"/></svg></span>
-            <span>
-                <strong>Add admin staff</strong>
-                <span>New GSU team member: full, Facilities or Repair &amp; Maintenance access</span>
-            </span>
-        </a>
+        @if ($staffSeatsLeft > 0)
+            <a href="{{ route('admin.users.create', ['role' => 'admin']) }}" class="adt-card adt-add">
+                <span class="adt-add-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0114 0M19 8v6M16 11h6"/></svg></span>
+                <span>
+                    <strong>Add admin staff</strong>
+                    <span>New GSU team member: full, Facilities or Repair &amp; Maintenance access · {{ $staffSeatsLeft }} {{ $staffSeatsLeft === 1 ? 'slot' : 'slots' }} left</span>
+                </span>
+            </a>
+        @else
+            <div class="adt-card adt-add adt-add-off" aria-disabled="true">
+                <span class="adt-add-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
+                <span>
+                    <strong>Staff limit reached</strong>
+                    <span>The admin team can have {{ $maxStaff }} staff accounts. Deactivate one to add someone else.</span>
+                </span>
+            </div>
+        @endif
     </div>
 
     <div class="pk-section-head">
@@ -241,6 +251,8 @@
     .adt-edit:focus-visible, .adt-add:focus-visible { outline: 2px solid #64748B; outline-offset: 2px; }
     .adt-add { border-style: dashed; border-color: #CBD5E1; background: #F8FAFC; color: #0f172a; text-decoration: none; transition: border-color .15s ease, background .15s ease; }
     .adt-add:hover { border-color: #0f172a; background: #fff; }
+    .adt-add-off, .adt-add-off:hover { border-color: #CBD5E1; background: #F8FAFC; opacity: .7; cursor: not-allowed; }
+    .adt-add-off .adt-add-icon { background: #94A3B8; }
     .adt-add-icon { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; flex-shrink: 0; border-radius: 12px; background: #0f172a; color: #fff; }
     .adt-add-icon svg { width: 19px; height: 19px; }
     .adt-add strong { display: block; font-size: 14px; font-weight: 700; }

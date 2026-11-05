@@ -219,6 +219,7 @@ class TicketLookupTest extends TestCase
                 'end_time' => '14:00',
                 'facility_ids' => [$facility->id],
                 'purpose' => 'Successful college booking test',
+                'number_of_persons' => 40,
             ])
             ->assertRedirect(route('college.dashboard'));
 

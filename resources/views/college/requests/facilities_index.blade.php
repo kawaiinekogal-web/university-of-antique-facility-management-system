@@ -98,7 +98,7 @@
                 <article class="creq-card">
                     <div class="u-minw-0">
                         <p class="creq-id">
-                            <span class="creq-num">{{ 'FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-' . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT) }}</span>
+                            <span class="creq-num">{{ $submission->ticket_code }}</span>
                             <span class="creq-filed">Filed {{ $submission->created_at->format('M d, Y') }}</span>
                         </p>
                         <p class="creq-purpose">{{ Str::limit($submission->payload['purpose'] ?? '-', 80) }}</p>

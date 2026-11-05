@@ -155,7 +155,7 @@ Route::middleware(['auth', 'role:admin,facility_staff'])->group(function () {
 
     // Monthly Records
     Route::get('/admin/monthly-records', [AdminMonthlyRecordsController::class, 'index'])->name('admin.monthly-records.index');
-    Route::get('/admin/monthly-records/export', [AdminMonthlyRecordsController::class, 'exportCharts'])->name('admin.monthly-records.export');
+    Route::get('/admin/monthly-records/export', [AdminMonthlyRecordsController::class, 'export'])->name('admin.monthly-records.export');
 
     // Direct booking (GSU high-priority)
     Route::get('/admin/bookings/create-direct', [\App\Http\Controllers\Admin\BookingController::class, 'createDirect'])
@@ -260,6 +260,7 @@ Route::middleware(['auth', 'role:college_staff'])->group(function () {
     Route::get('/college/users/{user}/edit', [\App\Http\Controllers\College\UserController::class, 'edit'])->name('college.users.edit');
     Route::put('/college/users/{user}', [\App\Http\Controllers\College\UserController::class, 'update'])->name('college.users.update');
     Route::patch('/college/users/{user}/deactivate', [\App\Http\Controllers\College\UserController::class, 'deactivate'])->name('college.users.deactivate');
+    Route::patch('/college/users/{user}/activate', [\App\Http\Controllers\College\UserController::class, 'activate'])->name('college.users.activate');
 });
 
 // Org Staff
@@ -294,6 +295,7 @@ Route::middleware(['auth', 'role:org_staff'])->group(function () {
     Route::get('/org/users/{user}/edit', [\App\Http\Controllers\Org\UserController::class, 'edit'])->name('org.users.edit');
     Route::put('/org/users/{user}', [\App\Http\Controllers\Org\UserController::class, 'update'])->name('org.users.update');
     Route::patch('/org/users/{user}/deactivate', [\App\Http\Controllers\Org\UserController::class, 'deactivate'])->name('org.users.deactivate');
+    Route::patch('/org/users/{user}/activate', [\App\Http\Controllers\Org\UserController::class, 'activate'])->name('org.users.activate');
 });
 
 // Guest (External Users): no account needed. The old guest portal is retired; its links go to the public form.

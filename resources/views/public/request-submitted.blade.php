@@ -5,7 +5,7 @@
 @section('content')
 @include('layouts.partials.page-kit')
 @php
-    $code = 'FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-' . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT);
+    $code = $submission->ticket_code;
     $name = trim((string) ($submission->payload['client_name'] ?? ''));
     $email = trim((string) ($submission->payload['email'] ?? ''));
     $lastName = trim((string) ($submission->payload['requester_last_name'] ?? ''));

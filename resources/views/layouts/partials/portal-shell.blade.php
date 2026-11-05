@@ -34,9 +34,23 @@
         })->all();
         return $group;
     })->all();
+    // Current page = the active sidebar link (same match rule as sidebar.blade.php); names the topbar and browser tab
+    $shellPage = null;
+    foreach ($sections as $group) {
+        foreach ($group['links'] as $link) {
+            foreach ((array) ($link['routes'] ?? $link['route'] ?? []) as $pattern) {
+                if ($pattern && request()->routeIs($pattern)) {
+                    $shellPage = ['group' => $group['heading'] ?? null, 'label' => $link['label']];
+                    break 3;
+                }
+            }
+        }
+    }
     $shellFooter = '<div class="admin-user"><span class="admin-user-avatar" aria-hidden="true">' . e($shellInitials) . '</span>'
         . '<div class="min-w-0"><p class="admin-user-name truncate">' . e($shellName) . '</p><p class="admin-user-role truncate">' . e($roleLabel) . '</p></div></div>';
 @endphp
+{{-- Pages that set their own @section('title') keep it: Blade keeps the first definition --}}
+@section('title', ($shellPage['label'] ?? $portalHeading) . ' · UA Facility Management System')
 <div class="fms-shell admin-shell" id="admin-shell">
     {{-- app.css paints ".fms-shell > :first-child" and ".fms-shell > aside" with layered !important rules (black header,
          #2c2c2c hovers). The backdrop goes first and the sidebar sits in a wrapper so neither selector reaches it. --}}
@@ -75,7 +89,16 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
                 </button>
                 @if (request()->routeIs($dashboardRoute))
-                    <h1>{{ $portalHeading }}</h1> {{-- portal title only on the dashboard; other pages carry their own page title --}}
+                    {{-- Portal title on the dashboard; not an h1 (the dashboard's greeting is the page's one h1) --}}
+                    <p class="admin-topbar-title">{{ $portalHeading }}</p>
+                @elseif ($shellPage)
+                    {{-- Location line, not a heading: each page already has its own h1 --}}
+                    <p class="admin-topbar-crumb">
+                        @if ($shellPage['group'])<span class="admin-topbar-crumb-group">{{ $shellPage['group'] }}</span><span class="admin-topbar-crumb-sep" aria-hidden="true">/</span>@endif
+                        <span class="admin-topbar-crumb-page" aria-current="page">{{ $shellPage['label'] }}</span>
+                    </p>
+                @else
+                    <p class="admin-topbar-crumb"><span class="admin-topbar-crumb-page">{{ $portalHeading }}</span></p>
                 @endif
             </div>
             <div class="admin-topbar-actions">
@@ -83,7 +106,7 @@
             </div>
         </div>
 
-        <div class="fms-content-wrapper">
+        <div class="fms-content-wrapper" id="main-content" tabindex="-1">
             @yield($contentSection)
         </div>
     </section>

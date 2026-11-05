@@ -25,7 +25,10 @@ class GuestVenueRatesTest extends TestCase
             ->assertOk()
             ->assertSee('PaghiUsA Hall')
             ->assertSee('₱ 15,000.00 / day')
-            ->assertSee('Estimated seating capacity: 500-600 persons');
+            ->assertSee('Up to 600 persons')
+            ->assertSee('title="Seating: 500-600 persons"', false)
+            ->assertSeeInOrder(['Air-conditioned', 'Sound system', '700 chairs', '10 long tables', '4 industrial fans'])
+            ->assertSee('title="700 monoblock chairs"', false);
 
         $this->get(route('public.rates'))
             ->assertOk()

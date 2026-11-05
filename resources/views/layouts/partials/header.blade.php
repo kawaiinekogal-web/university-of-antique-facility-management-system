@@ -7,7 +7,7 @@
         </div>
     </div>
     <div class="header-right">
-        <details class="header-navigation">
+        <details class="header-navigation" id="header-navigation">
             <summary class="nav-menu-toggle">Menu</summary>
             <nav class="nav-links" aria-label="Main navigation">
                 <a class="nav-link" href="{{ route('home') }}#facilities">Facilities</a>
@@ -38,4 +38,14 @@
         </div>
     </div>
 </header>
+<script>
+// A closed <details> never renders its links, so keep it open above the 760px menu breakpoint (app.css)
+(() => {
+    const nav = document.getElementById('header-navigation');
+    const desktop = window.matchMedia('(min-width: 761px)');
+    const sync = () => { nav.open = desktop.matches; };
+    sync();
+    desktop.addEventListener('change', sync);
+})();
+</script>
 

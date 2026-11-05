@@ -35,6 +35,13 @@ class FacilitySeeder extends Seeder
                 'owner_college' => null,
                 'description'   => 'PAGHIUSA HALL',
             ],
+            [
+                'name'          => 'TIRIPUNAN HALL',
+                'location'      => 'Main Campus',
+                'owner_type'    => 'gsu',
+                'owner_college' => null,
+                'description'   => 'TIRIPUNAN HALL',
+            ],
 
             [
                 'name'          => 'E-HUB',

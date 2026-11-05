@@ -263,19 +263,34 @@ document.addEventListener('DOMContentLoaded', function () {
         <a class="ua-tr-primary" id="ua-tr-pdf" href="#" hidden>Open approved application PDF</a>
         <form id="ua-tr-payment-form" method="post" enctype="multipart/form-data" hidden>
           <input type="hidden" name="_token" value="{{ csrf_token() }}">
-          <label for="ua-tr-payment-file">Payment receipt (JPG, PNG, or PDF, max 10 MB)</label>
-          <input type="file" id="ua-tr-payment-file" name="payment_attachment" accept=".jpg,.jpeg,.png,.pdf" required>
-          <label for="ua-tr-payment-method">Payment method</label>
-          <select id="ua-tr-payment-method" name="payment_method">
-            <option value="">Select method</option>
-            <option value="online">Online payment</option>
-            <option value="bank_transfer">Bank transfer</option>
-            <option value="cashier">Cashier</option>
-          </select>
-          <label for="ua-tr-payment-reference">Reference number (optional)</label>
-          <input type="text" id="ua-tr-payment-reference" name="payment_reference" maxlength="120">
-          <label for="ua-tr-payment-amount">Amount paid (optional)</label>
-          <input type="number" id="ua-tr-payment-amount" name="payment_amount" min="0" step="0.01">
+          <div class="ua-tr-pay-head">
+            <p class="ua-tr-pay-title">Upload your payment receipt</p>
+            <p class="ua-tr-hint" id="ua-tr-pay-intro"></p>
+          </div>
+          <div class="ua-tr-field">
+            <label for="ua-tr-payment-file">Receipt file</label>
+            <input type="file" id="ua-tr-payment-file" name="payment_attachment" accept=".jpg,.jpeg,.png,.pdf" required aria-describedby="ua-tr-payment-file-hint">
+            <span class="ua-tr-hint" id="ua-tr-payment-file-hint">JPG, PNG or PDF, up to 10 MB</span>
+          </div>
+          <div class="ua-tr-field">
+            <label for="ua-tr-payment-method">Payment method</label>
+            <select id="ua-tr-payment-method" name="payment_method">
+              <option value="">Select method</option>
+              <option value="online">Online payment</option>
+              <option value="bank_transfer">Bank transfer</option>
+              <option value="cashier">Cashier</option>
+            </select>
+          </div>
+          <div class="ua-tr-row">
+            <div class="ua-tr-field">
+              <label for="ua-tr-payment-reference">Reference no. <span class="ua-tr-opt">Optional</span></label>
+              <input type="text" id="ua-tr-payment-reference" name="payment_reference" maxlength="120" placeholder="e.g. 1234 5678">
+            </div>
+            <div class="ua-tr-field">
+              <label for="ua-tr-payment-amount">Amount paid <span class="ua-tr-opt">Optional</span></label>
+              <input type="number" id="ua-tr-payment-amount" name="payment_amount" min="0" step="0.01" inputmode="decimal" placeholder="₱ 0.00">
+            </div>
+          </div>
           <button class="ua-tr-primary" type="submit">Submit receipt</button>
         </form>
         <p id="ua-tr-payment-message" role="status" hidden></p>
@@ -392,7 +407,12 @@ document.addEventListener('DOMContentLoaded', function () {
         .map((label, i) => '<li class="' + (i < current ? 'is-done' : i === current ? 'is-now' : '') + '"' + (i === current ? ' aria-current="step"' : '') + '><span></span>' + label + '</li>')
         .join('');
     }
-    const paymentLabels = { not_required: 'Not required', pending_payment: 'Waiting for your receipt', payment_uploaded: 'Receipt being verified', payment_verified: 'Verified' };
+    const paymentLabels = { not_required: 'Not required', pending_payment: 'Waiting for your receipt', payment_uploaded: 'Receipt being verified', payment_verified: 'Payment verified' };
+    const peso = n => '₱ ' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Same venue total as the approved PDF; "Amount due" only while the receipt is still owed
+    const amountRow = kind === 'FM' && result.amount_due != null
+      ? [[result.payment_status === 'pending_payment' ? 'Amount due' : 'Venue fee', peso(result.amount_due)]]
+      : [];
     const rows = (kind === 'RM'
       ? [['Facility', result.venue], ['Subject', result.subject], ['Sent', result.sent]]
       : [
@@ -400,7 +420,8 @@ document.addEventListener('DOMContentLoaded', function () {
           ...(kind === 'BK' ? [['Purpose', result.purpose]] : []),
           ['Date', result.date],
           ['Time', result.time],
-          ...(kind === 'FM' && result.payment_status ? [['Payment', paymentLabels[result.payment_status] || result.payment_status.replaceAll('_', ' ')]] : [])
+          ...(kind === 'FM' && result.payment_status ? [['Payment', paymentLabels[result.payment_status] || result.payment_status.replaceAll('_', ' ')]] : []),
+          ...amountRow
         ]).filter(r => r[1]);
     dialog.querySelectorAll('.ua-tr-actions [data-kind]').forEach(el => { el.hidden = el.dataset.kind !== kind; });
     const dl = $('ua-tr-details');
@@ -419,10 +440,18 @@ document.addEventListener('DOMContentLoaded', function () {
     pdf.hidden = !(kind === 'FM' && result.can_download_pdf && result.pdf_url);
     if (!pdf.hidden) pdf.href = result.pdf_url;
     paymentForm.hidden = !(kind === 'FM' && result.can_upload_payment && result.payment_upload_url);
-    if (!paymentForm.hidden) paymentForm.action = result.payment_upload_url;
+    if (!paymentForm.hidden) {
+      paymentForm.action = result.payment_upload_url;
+      const amountInput = $('ua-tr-payment-amount');
+      if (!amountInput.value && result.amount_due != null) amountInput.value = Number(result.amount_due).toFixed(2);
+      $('ua-tr-pay-intro').textContent = result.amount_due != null
+        ? 'Pay ' + peso(result.amount_due) + ', then upload the receipt here.'
+        : 'Pay the venue fee shown on your approved application PDF, then upload the receipt here.';
+    }
     paymentMessage.hidden = true;
     documents.hidden = pdf.hidden && paymentForm.hidden;
     if (!dialog.open) dialog.showModal();
+    dialog.scrollTop = 0; // autofocus on the bottom button would otherwise scroll the header out of view
   };
 
   $('ua-tr-payment-form').addEventListener('submit', function (event) {

@@ -85,10 +85,14 @@ class FormController extends Controller
                 // A member of the college's team (Users page) who holds a position
                 $notedName = $this->teamSignatories()->firstWhere('id', (int) $id)?->name;
             } elseif ($id) {
-                $signatory = Signatory::find($id);
-                if ($signatory) {
-                    $notedName = $signatory->name;
+                // Only an active signatory of this user's own college, of the type the card showed
+                $signatory = in_array($type, ['dean', 'program_head', 'president', 'adviser'], true)
+                    ? Signatory::where('type', $type)->forCollege($user->college_id, $user->college_name)->where('is_active', true)->find($id)
+                    : null;
+                if (! $signatory) {
+                    return back()->withInput()->withErrors(['noted_signatory_id' => "Choose who will note your request from your college's list, or pick \"Someone else\" and type their name."]);
                 }
+                $notedName = $signatory->name;
             }
         } elseif ($request->filled('noted_signatory_custom')) {
             $notedName = $request->input('noted_signatory_custom');
@@ -98,10 +102,7 @@ class FormController extends Controller
 
         $response = $this->handleStoreFacilities($request);
 
-        $submission = FormSubmission::where('requester_id', $user->id)
-            ->where('type', 'facilities_utilization')
-            ->latest('id')
-            ->first();
+        $submission = $this->storedSubmission;
 
         if ($submission) {
             $payload = $submission->payload ?? [];
@@ -141,7 +142,7 @@ class FormController extends Controller
 
     protected function requesterUnit(): string
     {
-        return Auth::user()->college_name;
+        return (string) Auth::user()->college_name; // never blank here: StoreFacilitiesUtilizationRequest requires it
     }
 
     protected function submittedRedirectRoute(): string

@@ -4,7 +4,7 @@
 @include('layouts.partials.page-kit')
 @php
     $p    = $payload ?? [];
-    $code = 'FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-' . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT);
+    $code = $submission->ticket_code;
 
     $statusMeta = [
         'pending'         => ['Pending review',         'is-warn'],

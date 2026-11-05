@@ -16,18 +16,23 @@
                     <p class="pk-stat-value">{{ $users->count() }}</p>
                 </div>
             </div>
-            @if ($canManage)
+            @if ($canManage && $seatsLeft > 0)
                 <a href="{{ route($prefix . '.users.create') }}" class="pk-btn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0114 0M19 8v6M16 11h6"/></svg>
                     Add user
                 </a>
+            @elseif ($canManage)
+                <span class="pk-btn uu-btn-off" aria-disabled="true" title="Deactivate an account to add someone else">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                    Limit reached
+                </span>
             @endif
         </div>
     </section>
 
     <div class="pk-section-head">
         <h2 class="pk-section-title">{{ $unitName ?: 'Your ' . $unitNoun }}</h2>
-        <span class="pk-section-meta">{{ $users->count() === 1 ? '1 account' : $users->count() . ' accounts' }}</span>
+        <span class="pk-section-meta">{{ $users->count() === 1 ? '1 account' : $users->count() . ' accounts' }} · {{ $maxAccounts - $seatsLeft }} of {{ $maxAccounts }} added accounts used</span>
     </div>
 
     @if ($users->isNotEmpty())
@@ -63,7 +68,7 @@
                             </td>
                             <td>
                                 <span class="{{ $user->position ? 'usr-unit' : 'uu-empty' }}">{{ $user->position ?: 'Not set' }}</span>
-                                @if ($isHead)<span class="uu-head" title="Can add, edit and deactivate accounts">{{ $prefix === 'college' ? 'College Admin' : 'Head' }}</span>@endif
+                                @if ($isHead)<span class="uu-head" title="Can add, edit, deactivate and activate accounts">{{ $prefix === 'college' ? 'College Admin' : 'Head' }}</span>@endif
                             </td>
                             <td class="pk-nowrap">{{ $user->created_at?->format('M d, Y') ?? '-' }}</td>
                             <td class="uu-actions-col">
@@ -83,6 +88,15 @@
                                                 Deactivate
                                             </button>
                                         </form>
+                                    @elseif ($canDel)
+                                        <form method="POST" action="{{ route($prefix . '.users.activate', $user) }}" data-confirm="Activate {{ $user->name }}'s account? They can sign in again. Requests cancelled when the account was deactivated stay cancelled." data-confirm-title="Activate account?" data-confirm-action="Activate account">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="uu-act is-good" aria-label="Activate {{ $user->name }}">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+                                                Activate
+                                            </button>
+                                        </form>
                                     @endif
                                 </div>
                             </td>
@@ -93,16 +107,17 @@
         </div>
         <p class="pk-help uu-note">
             @if ($canManage)
+                Besides your own account, you can have up to {{ $maxAccounts }} active accounts; deactivating one frees a slot.
                 @if ($prefix === 'college')
-                    As College Admin, you can add, edit and deactivate subaccounts for your college. Your own account cannot deactivate itself; GSU access is not needed to manage college subaccounts.
+                    As College Admin, you can add, edit, deactivate and activate subaccounts for your college. Your own account cannot deactivate itself; GSU access is not needed to manage college subaccounts.
                 @else
-                    As the head of your {{ $unitNoun }}, you can add, edit and deactivate accounts. Associated records are preserved. The original {{ $headTitle }} account can only be deactivated by the GSU admin.
+                    As the head of your {{ $unitNoun }}, you can add, edit, deactivate and activate accounts. Associated records are preserved. The original {{ $headTitle }} account can only be deactivated by the GSU admin.
                 @endif
             @else
                 @if ($prefix === 'college')
-                    Only the designated College Admin can add, edit or deactivate college subaccounts. You can edit your own account.
+                    Only the designated College Admin can add, edit, deactivate or activate college subaccounts. You can edit your own account.
                 @else
-                    Only the {{ $headTitle }} can add, edit or deactivate accounts. You can edit your own account.
+                    Only the {{ $headTitle }} can add, edit, deactivate or activate accounts. You can edit your own account.
                 @endif
             @endif
         </p>
@@ -112,9 +127,11 @@
             <h3>No users yet</h3>
             <p>Add the people who will handle the system for your {{ $unitNoun }}.</p>
         </div>
-
-        <style>
-            .uu-inactive { display: inline-block; margin-top: 4px; padding: 2px 7px; border-radius: 999px; background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; }
-        </style>
     @endif
+    <style>
+        .uu-inactive { display: inline-block; margin-top: 4px; padding: 2px 7px; border-radius: 999px; background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; }
+        .uu-btn-off { opacity: .6; cursor: not-allowed; }
+        .uu-act.is-good { color: #047857 !important; border-color: #A7F3D0; }
+        .uu-act.is-good:hover { border-color: #047857; background: #ECFDF5; }
+    </style>
 </div>

@@ -161,6 +161,7 @@ class MultiFacilityRequestTest extends TestCase
             'end_time' => '10:00',
             'facility_id' => $facility->id,
             'purpose' => 'Legacy single-facility request',
+            'number_of_persons' => 20,
         ]);
         $request->setContainer($this->app);
         $request->setRedirector($this->app['redirect']);
@@ -308,6 +309,7 @@ class MultiFacilityRequestTest extends TestCase
     private function requestValidator(array $data): \Illuminate\Contracts\Validation\Validator
     {
         $data['last_name'] ??= 'Test';
+        $data['number_of_persons'] ??= 20;
         $request = StoreFacilitiesUtilizationRequest::create('/college/requests/facilities', 'POST', $data);
         $validator = Validator::make($request->all(), $request->rules());
         $request->withValidator($validator);

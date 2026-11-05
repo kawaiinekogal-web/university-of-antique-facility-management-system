@@ -12,6 +12,9 @@ use Illuminate\Support\Str;
 
 trait SubmitsFacilitiesForm
 {
+    /** The request created by the last handleStoreFacilities() call; callers enrich this exact row. */
+    protected ?FormSubmission $storedSubmission = null;
+
     abstract protected function requesterType(): string;
 
     abstract protected function requesterUnit(): string;
@@ -61,6 +64,7 @@ trait SubmitsFacilitiesForm
             'facility_names'  => $facilityNames,
             'venue_others'    => $validated['venue_others'] ?? '',
             'purpose'         => $validated['purpose'],
+            'number_of_persons' => (int) $validated['number_of_persons'],
             'street_address'  => $validated['street_address'] ?? null,
             'barangay'        => $validated['barangay'] ?? null,
             'city_municipality' => $validated['city_municipality'] ?? null,
@@ -82,7 +86,8 @@ trait SubmitsFacilitiesForm
                 'sound'          => (int) $request->input('qty_sound', 0),
                 'led'            => (int) $request->input('qty_led', 0),
             ],
-            'equipment_other' => trim((string) $request->input('equipment_other', '')),
+            // "Other equipment" rows (Add item); read by bookings, PDFs, tickets and the records ledger
+            'equipment_others' => $this->otherEquipmentRows($validated),
         ];
 
         if ($attachmentPaths) {
@@ -103,6 +108,7 @@ trait SubmitsFacilitiesForm
             'payment_attachment' => $paymentAttachmentPath,
             'payment_status' => $paymentStatus,
         ]);
+        $this->storedSubmission = $submission;
 
         $notifications = app(NotificationService::class);
         $notifications->notifyFormSubmitted($user->id, $submission->id);
@@ -115,6 +121,15 @@ trait SubmitsFacilitiesForm
 
         return redirect()->route($this->submittedRedirectRoute())
             ->with('status', 'Facilities utilization request submitted to GSU.');
+    }
+
+    /** Add-item rows, plus the legacy single "Other equipment" text box (as one item) if a form still sends it. */
+    private function otherEquipmentRows(array $validated): array
+    {
+        $rows = FormSubmission::otherEquipmentFrom($validated);
+        $legacy = trim((string) ($validated['equipment_other'] ?? ''));
+
+        return $legacy === '' ? $rows : [...$rows, ['name' => $legacy, 'qty' => 1]];
     }
 
     protected function handleIndexFacilities()

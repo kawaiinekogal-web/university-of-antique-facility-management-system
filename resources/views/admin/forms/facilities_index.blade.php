@@ -30,7 +30,7 @@
                 Requests
             </p>
             <h1>All Requests</h1>
-            <p class="pk-hero-sub">Review and approve facility requests from colleges and organizations.</p>
+            <p class="pk-hero-sub">Review and approve facility requests from colleges, organizations and guests.</p>
         </div>
         <div class="pk-stat is-dark pk-stat--glass u-minw-180">
             <div>
@@ -52,12 +52,12 @@
 
     <!-- Filter Form -->
     <form method="GET" action="{{ route('admin.forms.facilities.index') }}" class="appr-filter">
-        <!-- Search by Control Number -->
+        <!-- Search by ticket code (what the requester has) or control number -->
         <div class="pk-field">
-            <label for="search" class="pk-label">Control Number</label>
+            <label for="search" class="pk-label">Ticket or control no.</label>
             <div class="appr-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-                <input type="text" id="search" name="search" class="pk-input" placeholder="BKG-123..." value="{{ request('search') }}" />
+                <input type="text" id="search" name="search" class="pk-input" placeholder="FM-2026-00021 or BKG-…" value="{{ request('search') }}" />
             </div>
         </div>
 
@@ -115,7 +115,7 @@
             <table class="pk-table">
                 <thead>
                     <tr>
-                        <th>Control No.</th>
+                        <th>Ticket</th>
                         <th>Requester</th>
                         <th>Unit</th>
                         <th>Status</th>
@@ -131,7 +131,10 @@
                             $initials = collect(preg_split('/\s+/', trim($requesterName)))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('');
                         @endphp
                         <tr>
-                            <td><span class="pk-code">{{ !empty($submission->payload['control_no']) ? $submission->payload['control_no'] : 'Not assigned' }}</span></td>
+                            <td>
+                                <span class="pk-code">{{ $submission->ticket_code }}</span>
+                                @if (!empty($submission->payload['control_no']))<span class="appr-sub">{{ $submission->payload['control_no'] }}</span>@endif
+                            </td>
                             <td>
                                 <span class="pk-person">
                                     <span class="pk-avatar" aria-hidden="true">{{ $initials ?: '?' }}</span>
@@ -141,6 +144,7 @@
                             <td>{{ $submission->requester_unit ?? '-' }}</td>
                             <td>
                                 <span class="pk-pill {{ $statusTone($submission->status) }}">{{ $submission->status === 'reserved' ? 'Reserved' : ucfirst($submission->status) }}</span>
+                                @if ($submission->paymentLabel())<span class="appr-sub">{{ $submission->paymentLabel() }}</span>@endif
                             </td>
                             <td class="pk-nowrap">{{ $submission->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
                             <td>

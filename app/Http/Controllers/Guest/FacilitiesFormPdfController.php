@@ -3,10 +3,8 @@
 namespace App\Http\Controllers\Guest;
 
 use App\Http\Controllers\Controller;
-use App\Models\Facility;
 use App\Models\FormSubmission;
 use App\Services\GuestFacilitiesDocxFiller;
-use App\Support\VenueRates;
 use Illuminate\Http\Request;
 use PhpOffice\PhpWord\IOFactory;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -36,40 +34,13 @@ class FacilitiesFormPdfController extends Controller
         }
 
         $payload = $submission->payload ?? [];
-        $facilityIds = $payload['facility_ids'] ?? (isset($payload['facility_id']) ? [$payload['facility_id']] : []);
-        $facilitiesById = Facility::whereIn('id', $facilityIds)->get()->keyBy('id');
-        $facilities = collect($facilityIds)->map(fn ($id) => $facilitiesById->get($id))->filter()->values();
-
-        $rateByName = collect(VenueRates::all())
-            ->mapWithKeys(function (array $venue) {
-                $name = $this->normalizeName($venue['name']);
-                preg_match('/PhP\s*([\d,.]+)/i', $venue['rate'], $matches);
-
-                return [$name => isset($matches[1]) ? (float) str_replace(',', '', $matches[1]) : null];
-            });
+        $quote = $submission->rentalQuote();
+        $facilities = $quote['facilities'];
+        $facilityRows = $quote['rows'];
+        $rentalTotal = $quote['total'];
         $startDate = $payload['date_activity'] ?? '';
         $endDate = $payload['date_end'] ?? $startDate;
-        $days = $startDate
-            ? max(1, \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($endDate)) + 1)
-            : 1;
         $timeRange = $payload['time_range'] ?? [];
-        $hours = ! empty($timeRange['start']) && ! empty($timeRange['end'])
-            ? round(\Carbon\Carbon::parse('2000-01-01 ' . $timeRange['start'])
-                ->diffInMinutes(\Carbon\Carbon::parse('2000-01-01 ' . $timeRange['end'])) / 60, 2)
-            : null;
-        $facilityRows = $facilities->map(function (Facility $facility) use ($rateByName, $days, $hours) {
-            $rate = $rateByName->get($this->normalizeName($facility->name));
-
-            return [
-                'name' => $facility->name,
-                'quantity' => '1',
-                'rate' => $rate,
-                'days' => (string) $days,
-                'hours' => $hours === null ? '' : rtrim(rtrim(number_format($hours, 2, '.', ''), '0'), '.'),
-                'total' => $rate === null ? null : $rate * $days,
-            ];
-        })->all();
-        $rentalTotal = collect($facilityRows)->sum(fn (array $row) => $row['total'] ?? 0);
 
         $controlNo = $payload['control_no'] ?? '';
         $dateRequest = $payload['date_request'] ?? now()->toDateString();
@@ -99,7 +70,7 @@ class FacilitiesFormPdfController extends Controller
             abort(500, 'Could not copy the guest form template.');
         }
         app(GuestFacilitiesDocxFiller::class)->fill($docxPath, [
-            'control_no' => $controlNo ?: ('FM-' . ($submission->created_at?->format('Y') ?? now()->format('Y')) . '-' . str_pad((string) $submission->id, 5, '0', STR_PAD_LEFT)),
+            'control_no' => $controlNo ?: $submission->ticket_code,
             'date_request' => $dateRequest,
             'client_name' => $clientName,
             'contact_number' => $contactNumber,
@@ -125,11 +96,6 @@ class FacilitiesFormPdfController extends Controller
     /**
      * DOCX → PDF via LibreOffice (same as admin controller).
      */
-    private function normalizeName(string $name): string
-    {
-        return preg_replace('/[^a-z0-9]+/', ' ', strtolower(trim($name)));
-    }
-
     private function convertAndDownload(string $docxPath, string $baseName): BinaryFileResponse
     {
         $outDir  = sys_get_temp_dir();

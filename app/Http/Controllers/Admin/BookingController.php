@@ -106,7 +106,7 @@ class BookingController extends Controller
             'start_time'    => ['required', 'date_format:H:i', new OperatingHours],
             'end_time'      => ['required', 'date_format:H:i', 'after:start_time', new OperatingHours],
             'purpose'       => 'required|string|max:500',
-            'number_of_persons' => 'nullable|integer|min:1|max:100000',
+            'number_of_persons' => ['nullable', 'integer', 'min:1', 'max:100000', new \App\Rules\WithinVenueCapacity($request->input('facility_ids'))],
             'requester_name' => 'required|string|max:255',
 
             // Equipment (optional)
@@ -120,6 +120,16 @@ class BookingController extends Controller
             ...FormSubmission::OTHER_EQUIPMENT_RULES,
         ], [
             'account_last_name.required' => 'Update your account with a separate last name before creating a direct reservation.',
+            'facility_ids.required' => 'Select at least one venue.',
+            'date_activity.required' => 'Pick the date of the activity.',
+            'start_time.required' => 'Enter a start time.',
+            'end_time.required' => 'Enter an end time.',
+            'end_time.after' => 'The end time must be later than the start time.',
+            'purpose.required' => 'Describe what the venue will be used for.',
+            'requester_name.required' => 'Enter the requester name or unit.',
+        ], [
+            'facility_ids' => 'venue', 'facility_ids.*' => 'venue', 'date_activity' => 'date of activity',
+            'number_of_persons' => 'number of persons', 'requester_name' => 'requester name / unit',
         ]);
         unset($data['account_last_name']);
 

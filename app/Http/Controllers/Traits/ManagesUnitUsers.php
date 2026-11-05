@@ -21,6 +21,9 @@ use Illuminate\Validation\Rules\Password;
  */
 trait ManagesUnitUsers
 {
+    /** Active accounts a unit may have besides its original head account. */
+    public const MAX_ADDED_ACCOUNTS = 2;
+
     private const CONTACT_NUMBER_MESSAGES = [
         'contact_number.regex' => 'Enter an 11-digit contact number in the format 09xx-xxx-xxxx.',
     ];
@@ -52,13 +55,18 @@ trait ManagesUnitUsers
         $canManage = $this->isHead(auth()->user());
         $headIds = $users->filter(fn ($u) => $this->isHead($u, $primaryId))->pluck('id')->all();
         $headTitle = $this->headTitle();
+        $seatsLeft = $this->seatsLeft();
+        $maxAccounts = self::MAX_ADDED_ACCOUNTS;
 
-        return view($this->unitPrefix() . '.users.index', compact('users', 'primaryId', 'canManage', 'headIds', 'headTitle'));
+        return view($this->unitPrefix() . '.users.index', compact('users', 'primaryId', 'canManage', 'headIds', 'headTitle', 'seatsLeft', 'maxAccounts'));
     }
 
     public function create()
     {
         abort_unless($this->isHead(auth()->user()), 403);
+        if ($this->seatsLeft() === 0) {
+            return $this->limitReached();
+        }
 
         return view($this->unitPrefix() . '.users.create', ['editUser' => null, 'canManage' => true]);
     }
@@ -75,6 +83,10 @@ trait ManagesUnitUsers
             'email'    => 'required|email|max:255|unique:users,email',
             'password' => ['required', 'string', 'confirmed', Password::min(8)->max(94)->mixedCase()->symbols()],
         ], self::CONTACT_NUMBER_MESSAGES);
+
+        if ($this->seatsLeft() === 0) {
+            return $this->limitReached();
+        }
 
         User::create([
             'name'     => $data['name'],
@@ -158,10 +170,49 @@ trait ManagesUnitUsers
         );
     }
 
+    public function activate(User $user)
+    {
+        $user = $this->findInUnit($user);
+        abort_unless($this->isHead(auth()->user()), 403);
+
+        $back = redirect()->route($this->unitPrefix() . '.users.index');
+        if ($user->is_active) {
+            return $back->with('status', 'Account is already active for ' . $user->name . '.');
+        }
+        // The original head account never takes a slot; everyone else does
+        if ($user->id !== $this->primaryId() && $this->seatsLeft() === 0) {
+            return $this->limitReached();
+        }
+
+        $user->is_active = true;
+        $user->save();
+
+        return $back->with('status', 'Account activated for ' . $user->name . '. Requests cancelled at deactivation stay cancelled.');
+    }
+
     /** Accounts in the signed-in user's college / organization. */
     protected function unitUsers(): Builder
     {
         return $this->scopeToUnit(User::where('role', $this->unitRole()));
+    }
+
+    /** How many more accounts the head can add; deactivated accounts free their slot. */
+    protected function seatsLeft(): int
+    {
+        $primaryId = $this->primaryId();
+        $added = $this->unitUsers()->where('is_active', true)
+            ->when($primaryId, fn ($q) => $q->whereKeyNot($primaryId))
+            ->count();
+
+        return max(0, self::MAX_ADDED_ACCOUNTS - $added);
+    }
+
+    protected function limitReached()
+    {
+        return redirect()->route($this->unitPrefix() . '.users.index')
+            ->with('error', 'Your ' . ($this->unitPrefix() === 'college' ? 'college' : 'organization')
+                . ' already has the maximum of ' . self::MAX_ADDED_ACCOUNTS
+                . ' added accounts. Deactivate one to add someone else.');
     }
 
     /** The account that handled the unit first. */

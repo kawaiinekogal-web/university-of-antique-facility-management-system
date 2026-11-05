@@ -72,11 +72,7 @@ class FormController extends Controller
 
         $response = $this->handleStoreFacilities($request);
 
-
-        $submission = FormSubmission::where('requester_id', $user->id)
-            ->where('type', 'facilities_utilization')
-            ->latest('id')
-            ->first();
+        $submission = $this->storedSubmission;
 
         if ($submission) {
             $payload = $submission->payload ?? [];
@@ -97,7 +93,7 @@ class FormController extends Controller
 
     protected function requesterUnit(): string
     {
-        return Auth::user()->organization_name;
+        return (string) Auth::user()->organization_name; // never blank here: StoreFacilitiesUtilizationRequest requires it
     }
 
     protected function submittedRedirectRoute(): string

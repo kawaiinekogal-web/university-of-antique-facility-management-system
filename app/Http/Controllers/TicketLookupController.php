@@ -78,6 +78,9 @@ class TicketLookupController extends Controller
         $approved = $isGuestRequest && in_array($submission->status, ['approved', 'reserved'], true);
         $canUploadPayment = $approved && $submission->requester_type === 'guest'
             && in_array($submission->payment_status, ['pending_payment', 'not_required'], true);
+        // Same venue total as the approved application PDF; withheld when any venue's rate is set by GSU
+        $quote = $approved ? $submission->rentalQuote() : null;
+        $amountDue = $quote && $quote['complete'] && $quote['total'] > 0 ? round($quote['total'], 2) : null;
 
         return response()->json([
             'status' => $rescheduled ? 'rescheduled' : $submission->status,
@@ -92,6 +95,7 @@ class TicketLookupController extends Controller
                 ? $rescheduled->start_time->format('g:i A') . ' – ' . $rescheduled->end_time->format('g:i A')
                 : $this->timeLabel($payload['time_range'] ?? []),
             'payment_status' => $submission->payment_status ?? 'not_required',
+            'amount_due' => $amountDue,
             'can_download_pdf' => $approved,
             'pdf_url' => $approved
                 ? URL::temporarySignedRoute('guest.forms.facilities.pdf', now()->addMinutes(30), ['submission' => $submission->id], false)
@@ -138,7 +142,7 @@ class TicketLookupController extends Controller
 
         return response()->json([
             'payment_status' => $submission->payment_status,
-            'message' => 'Receipt submitted. GSU will verify your payment.',
+            'message' => 'Receipt submitted. GSU will check it and email you once your payment is verified; this ticket will then show Confirmed.',
         ]);
     }
 

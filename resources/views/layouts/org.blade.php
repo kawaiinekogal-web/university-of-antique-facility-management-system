@@ -14,8 +14,8 @@
             'heading' => 'Overview',
             'links' => [
                 ['label' => 'Dashboard', 'route' => 'org.dashboard', 'icon' => 'dashboard'],
-                ['label' => 'My Reservations', 'route' => 'org.bookings.index', 'routes' => 'org.bookings.index', 'icon' => 'bookmark'],
                 ['label' => 'Reservation calendar', 'route' => 'org.bookings.calendar', 'icon' => 'calendar'],
+                ['label' => 'Reservations', 'route' => 'org.bookings.index', 'routes' => 'org.bookings.index', 'icon' => 'bookmark'],
             ],
         ],
         [

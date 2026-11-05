@@ -12,21 +12,29 @@ class PublicRequestAddressTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_address_pickers_are_saved_as_one_address_line(): void
+    public function test_address_fields_are_saved_separately_and_as_one_address_line(): void
     {
-        $this->submit(['address_street' => 'Purok 3', 'address_barangay' => 'Bahuyan', 'address_town' => 'Barbaza', 'address_province' => 'Antique'])
-            ->assertRedirect();
-        $this->assertSame('Purok 3, Brgy. Bahuyan, Barbaza, Antique', FormSubmission::latest('id')->first()->payload['address']);
+        $this->submit([
+            'street_address' => 'Purok 3', 'barangay' => 'Bahuyan', 'city_municipality' => 'Barbaza',
+            'province' => 'Antique', 'country' => 'Philippines',
+        ])->assertSessionHasNoErrors()->assertRedirect();
 
-        // No street, and a barangay that already says "Barangay": no doubled prefix
-        $this->submit(['address_barangay' => 'Barangay 1', 'address_town' => 'Manila City', 'address_province' => 'Metro Manila'])
-            ->assertRedirect();
-        $this->assertSame('Barangay 1, Manila City, Metro Manila', FormSubmission::latest('id')->first()->payload['address']);
+        $payload = FormSubmission::where('payload->email', 'guest@example.test')->latest('id')->firstOrFail()->payload;
+        $this->assertSame('Purok 3, Bahuyan, Barbaza, Antique, Philippines', $payload['address']);
+        $this->assertSame(['Purok 3', 'Bahuyan', 'Barbaza', 'Antique', 'Philippines'],
+            [$payload['street_address'], $payload['barangay'], $payload['city_municipality'], $payload['province'], $payload['country']]);
     }
 
-    public function test_province_town_and_barangay_are_required(): void
+    public function test_every_address_field_is_required(): void
     {
-        $this->submit([])->assertSessionHasErrors(['address_province', 'address_town', 'address_barangay']);
+        $this->submit([])->assertSessionHasErrors(['street_address', 'barangay', 'city_municipality', 'province', 'country']);
+    }
+
+    public function test_a_single_legacy_address_line_is_no_longer_accepted(): void
+    {
+        // Used to be stored with "Not provided" placeholders, bypassing the structured address
+        $this->submit(['address' => 'Sibalom, Antique'])
+            ->assertSessionHasErrors(['street_address', 'barangay', 'city_municipality', 'province', 'country']);
     }
 
     private function submit(array $address)
