@@ -79,14 +79,14 @@
                             @error('contact_number')<p class="pr-err">{{ $message }}</p>@enderror
                             <p class="pk-help" id="contact-number-help">Numbers only, in the format 09XX-XXX-XXXX.</p>
                         </div>
-                    </div>
-                    <div class="u-stack-14 u-mt-14">
                         <div class="pk-field">
                             <label class="pk-label" for="email">Email Address <span class="pk-req">*</span></label>
                             <input type="email" name="email" id="email" required maxlength="160" autocomplete="email" class="pk-input" value="{{ old('email') }}" placeholder="name@example.com" aria-describedby="email-help" @error('email') aria-invalid="true" @enderror>
                             @error('email')<p class="pr-err">{{ $message }}</p>@enderror
                             <p class="pk-help" id="email-help">GSU will use this email to reach you about this request and your payment.</p>
                         </div>
+                    </div>
+                    <div class="u-stack-14 u-mt-14">
                         <div class="pk-field">
                             <label class="pk-label" for="organization">Organization/Agency <span class="pk-req">*</span></label>
                             <input type="text" name="organization" id="organization" required autocomplete="organization" class="pk-input" value="{{ old('organization') }}" placeholder="Company, agency or group you represent" @error('organization') aria-invalid="true" @enderror>
@@ -121,15 +121,13 @@
                         </div>
                     </div>
                     <div class="pk-field u-mt-14">
-                        <label class="pk-label" for="noted_signatory_id">Noted by (Immediate Head) <span class="pk-req">*</span></label>
-                        <select name="noted_signatory_id" id="noted_signatory_id" required class="pk-input" @error('noted_signatory_id') aria-invalid="true" @enderror>
-                            <option value="" disabled {{ old('noted_signatory_id', 'custom') === '' ? 'selected' : '' }}>Suggested names unavailable</option>
-                            <option value="custom" {{ old('noted_signatory_id', 'custom') === 'custom' ? 'selected' : '' }}>Others (specify name)</option>
-                        </select>
-                        <input type="text" name="noted_signatory_custom" id="noted_signatory_custom" required class="pk-input" aria-label="Noted by: full name" value="{{ old('noted_signatory_custom') }}" placeholder="Full name" @error('noted_signatory_custom') aria-invalid="true" @enderror>
+                        <label class="pk-label" for="noted_signatory_custom">Noted by (Immediate Head) <span class="pk-req">*</span></label>
+                        {{-- Guests always name their own head; the server expects noted_signatory_id = custom --}}
+                        <input type="hidden" name="noted_signatory_id" value="custom">
+                        <input type="text" name="noted_signatory_custom" id="noted_signatory_custom" required class="pk-input" autocomplete="name" value="{{ old('noted_signatory_custom') }}" placeholder="Full name" @error('noted_signatory_custom') aria-invalid="true" @enderror>
                         @error('noted_signatory_custom')<p class="pr-err">{{ $message }}</p>@enderror
                         @error('noted_signatory_id')<p class="pr-err">{{ $message }}</p>@enderror
-                        <p class="pk-help">Choose Others and enter the representative or immediate head of your organization.</p>
+                        <p class="pk-help">Full name of your organization's representative or immediate head.</p>
                     </div>
                     <p class="ga-small">Director/Unit Head and OIC-VP for Administration and Finance approval will be processed by the GSU office.</p>
                 </div>
@@ -230,7 +228,6 @@ function calculateTotal() {
     document.getElementById('daysCell').textContent = days;
     document.getElementById('hoursCell').textContent = hours.toFixed(1);
     document.getElementById('totalCell').textContent = peso(total);
-    document.getElementById('grandTotalCell').textContent = peso(total);
 }
 form.addEventListener('input', calculateTotal);
 form.addEventListener('change', calculateTotal);
@@ -241,8 +238,8 @@ document.getElementById('client_name').addEventListener('input', function () { d
 
 // The estimate shown beside (and, on small screens, above Submit) follows the fee breakdown
 function syncEstimate() {
-    document.getElementById('sum-total').textContent = document.getElementById('grandTotalCell').textContent;
-    document.getElementById('sum-total-m').textContent = document.getElementById('grandTotalCell').textContent;
+    document.getElementById('sum-total').textContent = document.getElementById('totalCell').textContent;
+    document.getElementById('sum-total-m').textContent = document.getElementById('totalCell').textContent;
 }
 form.addEventListener('input', () => setTimeout(syncEstimate));
 form.addEventListener('change', () => setTimeout(syncEstimate));

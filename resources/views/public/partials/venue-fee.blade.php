@@ -11,7 +11,3 @@
         <div class="is-sum"><dt>Venue fee</dt><dd id="totalCell">₱ 0.00</dd></div>
     </dl>
 </div>
-<div class="pr-grand">
-    <span>Estimated venue total</span>
-    <strong id="grandTotalCell">₱ 0.00</strong>
-</div>

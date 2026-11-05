@@ -60,6 +60,17 @@ The admin, college, org and guest forms now share one set of parts, so they look
 - **Readability:** faint helper text, placeholders and labels now meet WCAG AA contrast (4.5:1).
 - **"Long Table":** the table equipment is named "Long Table" everywhere, matching the GSU rate sheet.
 
+### Request form polish (all portals)
+
+- **Guest form:**
+  - Contact No. and Email now share a row.
+  - "Noted by (Immediate Head)" is a single name field; it was a dropdown with only one usable choice.
+  - The venue total shows once, in the summary panel (and above Submit on phones), instead of twice.
+- **Phones:**
+  - Venue cards show two per row, which roughly halves the scroll.
+  - The "booked" badge sits under the venue details instead of squeezing them, and status labels wrap inside the card.
+  - The live summary panel is hidden on phones, where it only appeared below Submit; the guest estimate still shows above Submit.
+
 ---
 
 ## 4. Bugs fixed

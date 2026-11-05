@@ -4947,6 +4947,17 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
     .pk-form-card .eq-round { width: 34px; height: 34px; }
     .pk-form-card .eq-more button { height: 32px; font-size: 12px; }
     .pk-form-card .dp-mode button { height: 38px; padding: 0 16px; }
+    /* Venue board: two cards per row instead of one long column */
+    .pk-form-card .vb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .pk-form-card .vb-card label { gap: 8px; padding: 10px; }
+    .pk-form-card .vb-name { font-size: 12.5px; }
+    .pk-form-card .vb-cap { font-size: 12px; }
+    .pk-form-card .vb-tag { padding: 1px 6px; font-size: 10.5px; }
+    /* Narrow cards: the "1 booked" badge goes under the venue details instead of squeezing them */
+    .pk-form-card .vb-top { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .pk-form-card .vb-status { max-width: 100%; white-space: normal; line-height: 1.35; }
+    /* The live summary would sit below Submit on a phone; the form itself (and the guest estimate above Submit) covers it */
+    .pk-form-layout > .pk-aside { display: none; }
 }
 
 /* Skip link (layouts/app): hidden until focused, then shown top-left above everything */
