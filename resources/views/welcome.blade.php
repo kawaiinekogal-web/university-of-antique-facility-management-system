@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <ol class="ua-tr-steps" id="ua-tr-steps" aria-label="Request progress" hidden></ol>
       <dl class="ua-tr-details" id="ua-tr-details"></dl>
       <div class="ua-tr-documents" id="ua-tr-documents" hidden>
-        <a class="ua-tr-primary" id="ua-tr-pdf" href="#" hidden>Open approved application PDF</a>
+        <a class="ua-tr-primary" id="ua-tr-pdf" href="#" hidden>Download approved booking details</a>
         <form id="ua-tr-payment-form" method="post" enctype="multipart/form-data" hidden>
           <input type="hidden" name="_token" value="{{ csrf_token() }}">
           <div class="ua-tr-pay-head">
@@ -338,10 +338,10 @@ document.addEventListener('DOMContentLoaded', function () {
       hint: 'Enter the tracking code and the exact last name provided for tracking.',
       states: {
         pending:     { title: 'Waiting for review', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'Your request was received and is waiting for GSU review.' },
-        pending_payment: { title: 'Payment being verified', label: 'Pending payment', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'GSU is checking your payment receipt before reviewing the request.' },
-        reserved:    { title: 'Request approved', label: 'Approved', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'GSU approved your request. Submit the payment receipt below to continue.' },
+        pending_payment: { title: 'Payment being confirmed', label: 'Pending payment', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'Your request is approved. Inquire with GSU to arrange and confirm cashier payment.' },
+        reserved:    { title: 'Request approved', label: 'Approved', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'GSU approved your request. Inquire with GSU to arrange and confirm cashier payment.' },
         disapproved: { title: 'Request not approved', label: 'Disapproved', tone: '#B91C1C', bg: '#FEF2F2', icon: 'x', msg: 'GSU did not approve this request. Sign in to your portal for details, or contact the GSU office.' },
-        approved:    { title: 'Request approved', label: 'Approved', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'GSU approved your request. Submit the payment receipt below to continue.' },
+        approved:    { title: 'Request approved', label: 'Approved', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'GSU approved your request. Inquire with GSU to arrange and confirm cashier payment.' },
         ongoing:     { title: 'In progress', label: 'Ongoing', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'play', msg: 'Your request is approved and being processed for your schedule.' },
         rescheduled: { title: 'Moved to a new schedule', label: 'Rescheduled', tone: '#4338CA', bg: '#EEF2FF', icon: 'swap', msg: 'Your booking was moved to a new date or time. Check the details below.' },
         cancelled:   { title: 'Request cancelled', label: 'Cancelled', tone: '#475569', bg: '#F1F5F9', icon: 'x', msg: 'This request was cancelled. Submit a new request if you still need the venue.' }
@@ -392,11 +392,11 @@ document.addEventListener('DOMContentLoaded', function () {
     let message = s.msg;
     const approvedStatus = ['approved', 'reserved', 'rescheduled'].includes(result.status);
     if (kind === 'FM' && approvedStatus && result.payment_status === 'pending_payment') {
-      message = 'Your request is approved. Submit your payment receipt below using this ticket.';
+      message = 'Your request is approved. Please inquire with the GSU office to arrange and confirm payment.';
     } else if (kind === 'FM' && approvedStatus && result.payment_status === 'payment_uploaded') {
-      message = 'Your request is approved. GSU is verifying your payment receipt.';
+      message = 'Your request is approved. GSU is confirming your cashier payment.';
     } else if (kind === 'FM' && approvedStatus && result.payment_status === 'payment_verified') {
-      message = 'Your request and payment are approved. Open the completed application PDF below.';
+      message = 'Your request and payment are confirmed. Download your approved booking details below.';
     }
     $('ua-tr-msg').textContent = message;
     const steps = $('ua-tr-steps');
@@ -407,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .map((label, i) => '<li class="' + (i < current ? 'is-done' : i === current ? 'is-now' : '') + '"' + (i === current ? ' aria-current="step"' : '') + '><span></span>' + label + '</li>')
         .join('');
     }
-    const paymentLabels = { not_required: 'Not required', pending_payment: 'Waiting for your receipt', payment_uploaded: 'Receipt being verified', payment_verified: 'Payment verified' };
+    const paymentLabels = { not_required: 'Not required', pending_payment: 'Awaiting GSU payment confirmation', payment_uploaded: 'Payment being confirmed', payment_verified: 'Payment verified' };
     const peso = n => '₱ ' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     // Same venue total as the approved PDF; "Amount due" only while the receipt is still owed
     const amountRow = kind === 'FM' && result.amount_due != null
@@ -439,17 +439,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const paymentMessage = $('ua-tr-payment-message');
     pdf.hidden = !(kind === 'FM' && result.can_download_pdf && result.pdf_url);
     if (!pdf.hidden) pdf.href = result.pdf_url;
-    paymentForm.hidden = !(kind === 'FM' && result.can_upload_payment && result.payment_upload_url);
-    if (!paymentForm.hidden) {
-      paymentForm.action = result.payment_upload_url;
-      const amountInput = $('ua-tr-payment-amount');
-      if (!amountInput.value && result.amount_due != null) amountInput.value = Number(result.amount_due).toFixed(2);
-      $('ua-tr-pay-intro').textContent = result.amount_due != null
-        ? 'Pay ' + peso(result.amount_due) + ', then upload the receipt here.'
-        : 'Pay the venue fee shown on your approved application PDF, then upload the receipt here.';
-    }
+    // Keep the legacy upload flow in the markup and API for existing records, but
+    // guests now pay at the cashier and confirm payment with GSU in person.
+    paymentForm.hidden = true;
     paymentMessage.hidden = true;
-    documents.hidden = pdf.hidden && paymentForm.hidden;
+    documents.hidden = pdf.hidden;
     if (!dialog.open) dialog.showModal();
     dialog.scrollTop = 0; // autofocus on the bottom button would otherwise scroll the header out of view
   };

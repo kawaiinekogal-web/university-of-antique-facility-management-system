@@ -47,14 +47,14 @@
             <span class="pr-step-num">2</span>
             <div>
                 <h2>Wait for approval</h2>
-                <p>GSU will review your request. If approved, upload your payment receipt using the ticket tracker.</p>
+                <p>GSU will review your request. If approved, inquire with the GSU office to arrange and confirm payment.</p>
             </div>
         </div>
         <div class="pr-step">
             <span class="pr-step-num">3</span>
             <div>
                 <h2>Track it anytime</h2>
-                <p>On the home page, enter <strong>{{ $code }}</strong>@if ($lastName !== '') and the tracking last name <strong>{{ $lastName }}</strong>@endif.</p>
+                <p>On the home page, enter <strong>{{ $code }}</strong>@if ($lastName !== '') and the tracking last name <strong>{{ $lastName }}</strong>@endif. After approval, download your booking details from the tracker.</p>
                 <a href="{{ route('home') }}#track" class="pr-link">Go to Track a request →</a>
             </div>
         </div>

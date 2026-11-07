@@ -231,7 +231,8 @@ class FormSubmissionController extends Controller
     }
 
     /**
-     * Verify payment attachment for a submission.
+     * Confirm a guest payment after the guest has paid at the cashier.
+     * Guests do not upload payment details through the public tracker.
      */
     public function verifyPayment(FormSubmission $submission)
     {
@@ -239,14 +240,18 @@ class FormSubmissionController extends Controller
             abort(404);
         }
 
-        if ($submission->payment_status !== 'payment_uploaded') {
+        $canConfirmManually = $submission->requester_type === 'guest'
+            && $submission->payment_status === 'pending_payment';
+        if ($submission->payment_status !== 'payment_uploaded' && ! $canConfirmManually) {
             return back()->withErrors(['status' => 'No payment to verify.']);
         }
 
         $submission->markPaymentVerified();
         $this->guestRequestEmails->sendSubmissionUpdate($submission, 'payment_verified');
 
-        return back()->with('status', 'Payment verified successfully.');
+        return back()->with('status', $canConfirmManually
+            ? 'Guest payment confirmed manually.'
+            : 'Payment verified successfully.');
     }
 
 }

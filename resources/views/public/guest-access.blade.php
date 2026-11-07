@@ -106,7 +106,7 @@
             <li>
                 <span class="gx-step-num">3</span>
                 <h3>Submit &amp; pay</h3>
-                <p>Upload your payment receipt with your request. GSU verifies the payment, then reviews your request.</p>
+                <p>Submit your request first. After approval, inquire with the GSU office to arrange and confirm payment at the cashier.</p>
             </li>
             <li>
                 <span class="gx-step-num">4</span>
@@ -158,7 +158,7 @@
             <li><strong>Organization or group name</strong><span>Who you represent, or your own name for a private event.</span></li>
             <li><strong>Your immediate head</strong><span>The person who notes the request (e.g. your organization's head).</span></li>
             <li><strong>Event date &amp; time</strong><span>At least 30 days from today; same time each day for multi-day events.</span></li>
-            <li><strong>Your payment receipt</strong><span>Upload a JPG, PNG, or PDF file no larger than 10 MB with your request.</span></li>
+            <li><strong>Your payment details</strong><span>Pay through the cashier and inquire with GSU so an admin can confirm your payment manually.</span></li>
             <li><strong>An email address</strong><span>GSU uses it to contact you about your request.</span></li>
         </ul>
     </section>

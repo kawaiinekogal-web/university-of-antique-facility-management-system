@@ -330,14 +330,16 @@
             </section>
 
             {{-- Payment --}}
-            @if ($submission->payment_attachment)
+            @if ($submission->payment_attachment || ($submission->requester_type === 'guest' && $submission->payment_status === 'pending_payment'))
                 <section class="rqd-card">
                     <h2 class="rqd-card-title">Payment</h2>
                     <dl class="rqd-rows">
                         <div class="rqd-row">
                             <dt>Status</dt>
                             <dd>
-                                @if ($submission->payment_status === 'payment_uploaded')
+                                @if ($submission->payment_status === 'pending_payment')
+                                    <span class="pk-pill is-warn">Awaiting manual confirmation</span>
+                                @elseif ($submission->payment_status === 'payment_uploaded')
                                     <span class="pk-pill is-warn">Awaiting verification</span>
                                 @elseif ($submission->payment_status === 'payment_verified')
                                     <span class="pk-pill is-good">Verified</span>
@@ -346,10 +348,17 @@
                                 @endif
                             </dd>
                         </div>
-                        <div class="rqd-row">
-                            <dt>Receipt</dt>
-                            <dd><a href="{{ route('payment-receipts.show', $submission) }}" class="rqd-link">Download receipt</a></dd>
-                        </div>
+                        @if ($submission->payment_attachment)
+                            <div class="rqd-row">
+                                <dt>Receipt</dt>
+                                <dd><a href="{{ route('payment-receipts.show', $submission) }}" class="rqd-link">Download receipt</a></dd>
+                            </div>
+                        @else
+                            <div class="rqd-row">
+                                <dt>Receipt</dt>
+                                <dd>Guest will inquire with GSU after paying at the cashier.</dd>
+                            </div>
+                        @endif
                         @if ($submission->payment_method || $submission->payment_reference || $submission->payment_amount !== null)
                             <div class="rqd-row">
                                 <dt>Payment details</dt>
@@ -361,12 +370,12 @@
                             </div>
                         @endif
                     </dl>
-                    @if ($submission->payment_status === 'payment_uploaded')
+                    @if (in_array($submission->payment_status, ['pending_payment', 'payment_uploaded'], true))
                         <form method="POST" action="{{ route('admin.forms.facilities.verify-payment', $submission) }}" class="rqd-btn-row rqd-payment-form">
                             @csrf
                             <button type="submit" class="rqd-btn is-good">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-                                Verify payment
+                                {{ $submission->payment_status === 'pending_payment' ? 'Confirm cashier payment' : 'Verify payment' }}
                             </button>
                         </form>
                     @endif

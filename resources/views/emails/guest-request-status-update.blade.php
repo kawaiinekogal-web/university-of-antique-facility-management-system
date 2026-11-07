@@ -16,7 +16,7 @@
             <p>Your request was not approved.</p>
             @break
         @case('payment_verified')
-            <p>GSU verified your payment receipt.</p>
+            <p>GSU manually confirmed your cashier payment.</p>
             @break
         @case('rescheduled')
             <p>Your booking schedule has changed.</p>

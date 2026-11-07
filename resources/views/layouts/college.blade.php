@@ -12,16 +12,22 @@
     'sections' => [
         [
             'heading' => 'Overview',
+            'always_open' => true,
             'links' => [
                 ['label' => 'Dashboard', 'route' => 'college.dashboard', 'icon' => 'dashboard'],
+            ],
+        ],
+        [
+            'heading' => 'Bookings',
+            'links' => [
                 ['label' => 'Reservation calendar', 'route' => 'college.calendar', 'icon' => 'calendar'],
                 ['label' => 'Reservations', 'route' => 'college.bookings.index', 'routes' => 'college.bookings.*', 'icon' => 'bookmark'],
             ],
         ],
         [
-            'heading' => 'Requests',
+            'heading' => 'Requests & support',
             'links' => [
-                ['label' => 'My requests', 'route' => 'college.requests.index', 'routes' => 'college.requests.index', 'icon' => 'inbox'],
+                ['label' => 'My requests', 'route' => 'college.requests.index', 'routes' => 'college.requests.*', 'icon' => 'inbox'],
                 ['label' => 'New request', 'route' => 'college.requests.facilities.create', 'routes' => 'college.requests.facilities.create', 'icon' => 'file-plus'],
                 ['label' => 'Repair & maintenance', 'route' => 'college.maintenance-tickets.index', 'routes' => 'college.maintenance-tickets.*', 'icon' => 'wrench'],
             ],

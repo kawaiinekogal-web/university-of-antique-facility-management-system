@@ -1723,15 +1723,34 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 /* Navigation: icon + label rows, quiet section labels, slate pill for the current page */
 .admin-shell .fms-sidebar-nav { padding: 18px 12px; scrollbar-width: none; }
 .admin-shell .fms-sidebar-nav::-webkit-scrollbar { display: none; }
-.admin-shell .fms-nav-group { margin-bottom: 20px; }
+.admin-shell .fms-nav-group { margin-bottom: 8px; }
 .admin-shell .fms-nav-group:last-child { margin-bottom: 0; }
 .admin-shell .fms-nav-group-title {
-    padding: 0 12px;
-    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 12px 6px;
     font-size: 10.5px;
     font-weight: 700;
     letter-spacing: .12em;
     color: #64748B;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+.admin-shell .fms-nav-group-title::-webkit-details-marker { display: none; }
+.admin-shell .fms-nav-group-chevron {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    transition: transform .18s ease;
+}
+.admin-shell .fms-nav-group:not([open]) .fms-nav-group-chevron { transform: rotate(-90deg); }
+.admin-shell .fms-nav-group-title:hover { color: #0F172A; }
+.admin-shell .fms-nav-group-title:focus-visible {
+    outline: 2px solid #0F172A;
+    outline-offset: 2px;
 }
 .admin-shell .fms-nav-list { display: grid; gap: 2px; }
 .admin-shell .fms-nav-link {

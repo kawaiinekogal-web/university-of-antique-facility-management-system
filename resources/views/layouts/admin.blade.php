@@ -10,16 +10,20 @@
             'heading' => 'Overview',
             'links' => [
                 ['label' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'dashboard'],
-                ['label' => 'Reservation calendar', 'route' => 'admin.calendar', 'icon' => 'calendar'],
-                ['label' => 'Reservations', 'route' => 'admin.bookings.index', 'routes' => ['admin.bookings.index'], 'icon' => 'bookmark'],
             ],
         ],
         [
-            // Same order as the College/Org "Requests" group: list, create, repair
-            'heading' => 'Requests',
+            'heading' => 'Bookings',
+            'links' => [
+                ['label' => 'Reservation calendar', 'route' => 'admin.calendar', 'icon' => 'calendar'],
+                ['label' => 'Reservations', 'route' => 'admin.bookings.index', 'routes' => ['admin.bookings.*'], 'icon' => 'bookmark'],
+                ['label' => 'Create direct reservation', 'route' => 'admin.bookings.create-direct', 'routes' => ['admin.bookings.create-direct'], 'icon' => 'edit'],
+            ],
+        ],
+        [
+            'heading' => 'Requests & support',
             'links' => [
                 ['label' => 'All requests', 'route' => 'admin.forms.facilities.index', 'routes' => 'admin.forms.facilities.*', 'icon' => 'approve'],
-                ['label' => 'Create direct reservation', 'route' => 'admin.bookings.create-direct', 'routes' => ['admin.bookings.create-direct'], 'icon' => 'edit'],
                 ['label' => 'Repair & maintenance', 'route' => 'admin.maintenance-tickets.index', 'routes' => 'admin.maintenance-tickets.*', 'icon' => 'wrench'],
             ],
         ],
@@ -42,7 +46,6 @@
             'heading' => 'Administration',
             'links' => [
                 ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users'],
-                ['label' => 'Create user', 'route' => 'admin.users.create', 'icon' => 'user-plus'],
             ],
         ],
     ];

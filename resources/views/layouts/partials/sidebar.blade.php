@@ -33,9 +33,23 @@
     {{-- NAV GROUPS --}}
     <nav class="fms-sidebar-nav">
         @foreach ($sections as $section)
-            <div class="fms-nav-group">
+            @php
+                $sectionActive = collect($section['links'] ?? [])->contains(function ($link) {
+                    foreach ((array) ($link['routes'] ?? $link['route'] ?? []) as $pattern) {
+                        if ($pattern && request()->routeIs($pattern)) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                });
+            @endphp
+            <details class="fms-nav-group" @if ($sectionActive || !empty($section['always_open'])) open @endif>
                 @if (!empty($section['heading']))
-                    <p class="fms-nav-group-title">{{ $section['heading'] }}</p>
+                    <summary class="fms-nav-group-title">
+                        <span>{{ $section['heading'] }}</span>
+                        <svg class="fms-nav-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </summary>
                 @endif
 
                 @if (!empty($section['links']))
@@ -65,7 +79,7 @@
                         @endforeach
                     </ul>
                 @endif
-            </div>
+            </details>
         @endforeach
     </nav>
 

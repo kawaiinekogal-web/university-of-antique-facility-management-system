@@ -12,16 +12,22 @@
     'sections' => [
         [
             'heading' => 'Overview',
+            'always_open' => true,
             'links' => [
                 ['label' => 'Dashboard', 'route' => 'org.dashboard', 'icon' => 'dashboard'],
+            ],
+        ],
+        [
+            'heading' => 'Bookings',
+            'links' => [
                 ['label' => 'Reservation calendar', 'route' => 'org.bookings.calendar', 'icon' => 'calendar'],
                 ['label' => 'Reservations', 'route' => 'org.bookings.index', 'routes' => 'org.bookings.index', 'icon' => 'bookmark'],
             ],
         ],
         [
-            'heading' => 'Requests',
+            'heading' => 'Requests & support',
             'links' => [
-                ['label' => 'My requests', 'route' => 'org.requests.facilities.index', 'routes' => 'org.requests.facilities.index', 'icon' => 'inbox'],
+                ['label' => 'My requests', 'route' => 'org.requests.facilities.index', 'routes' => 'org.requests.facilities.*', 'icon' => 'inbox'],
                 ['label' => 'New request', 'route' => 'org.requests.facilities.create', 'routes' => 'org.requests.facilities.create', 'icon' => 'file-plus'],
             ],
         ],

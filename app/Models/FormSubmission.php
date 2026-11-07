@@ -135,7 +135,7 @@ class FormSubmission extends Model
 
     /** Staff wording for each guest payment step; the public tracker words the same steps for the guest. */
     public const PAYMENT_LABELS = [
-        'pending_payment'  => 'Awaiting receipt',
+        'pending_payment'  => 'Awaiting GSU payment confirmation',
         'payment_uploaded' => 'Receipt to verify',
         'payment_verified' => 'Payment verified',
     ];
@@ -252,7 +252,7 @@ class FormSubmission extends Model
 
         $statusMeta = [
             'pending'         => ['Pending review',         'is-warn', 'GSU will review your request. You\'ll get a notification when it\'s approved.'],
-            'pending_payment' => ['Payment being verified', 'is-warn', 'GSU is checking your payment receipt before reviewing the request.'],
+            'pending_payment' => ['Payment being confirmed', 'is-warn', 'Inquire with GSU to arrange and confirm cashier payment.'],
             'approved'        => ['Approved',               'is-good', 'GSU approved your request. It will appear on the calendar once reserved.'],
             'reserved'        => ['Reserved',               'is-good', 'Your venue is reserved and on the calendar.'],
             'disapproved'     => ['Disapproved',            'is-bad',  'GSU did not approve this request.'],
