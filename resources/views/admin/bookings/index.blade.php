@@ -46,7 +46,6 @@
         </div>
     </section>
 
-    <!-- Quick status tabs (same ?status= filter as the form below) -->
     <nav class="rsv-tabs" aria-label="Filter by status">
         @foreach ($statusTabs as $value => $label)
             @php $params = array_filter(array_merge(request()->except(['status', 'page']), ['status' => $value]), fn ($v) => $v !== '' && $v !== null); @endphp
@@ -58,6 +57,9 @@
 
     <!-- Filter Form -->
     <form method="GET" action="{{ route('admin.bookings.index') }}" class="rsv-filter">
+        @if ($currentStatus !== '')
+            <input type="hidden" name="status" value="{{ $currentStatus }}">
+        @endif
         <!-- Search by Requester or Purpose -->
         <div class="pk-field">
             <label for="search" class="pk-label">Search</label>
@@ -65,18 +67,6 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
                 <input type="text" id="search" name="search" class="pk-input" placeholder="Requester, facility, or purpose..." value="{{ request('search') }}" />
             </div>
-        </div>
-
-        <!-- Status Filter -->
-        <div class="pk-field">
-            <label for="status" class="pk-label">Status</label>
-            <select id="status" name="status" class="pk-input">
-                <option value="">All Statuses</option>
-                <option value="reserved" {{ request('status') === 'reserved' ? 'selected' : '' }}>Reserved</option>
-                <option value="rescheduled" {{ request('status') === 'rescheduled' ? 'selected' : '' }}>Rescheduled</option>
-                <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
-                <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-            </select>
         </div>
 
         <!-- Facility Filter -->

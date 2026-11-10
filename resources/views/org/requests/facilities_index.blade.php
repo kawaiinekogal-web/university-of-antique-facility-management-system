@@ -23,9 +23,9 @@
         <div>
             <p class="pk-eyebrow">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg>
-                Requests
+                Facility requests
             </p>
-            <h1>My Facilities Requests</h1>
+            <h1>My facility requests</h1>
             <p class="pk-hero-sub">Follow each utilization request from submission to reservation.</p>
         </div>
         <div class="pk-hero-actions">
@@ -37,12 +37,12 @@
             </div>
             <a href="{{ route('org.requests.facilities.create') }}" class="pk-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                New Request
+                New facility request
             </a>
         </div>
     </section>
 
-    <nav class="creq-tabs" aria-label="Filter by status">
+    <nav class="creq-tabs" aria-label="Filter requests by status">
         @foreach ($statusTabs as $value => $label)
             @php $params = array_filter(array_merge(request()->except(['status', 'page']), ['status' => $value]), fn ($v) => $v !== '' && $v !== null); @endphp
             <a href="{{ route('org.requests.facilities.index', $params) }}"
@@ -53,21 +53,15 @@
 
     {{-- Filter Form --}}
     <form method="GET" action="{{ route('org.requests.facilities.index') }}" class="creq-filter">
+        @if ($currentStatus !== '')
+            <input type="hidden" name="status" value="{{ $currentStatus }}">
+        @endif
         <div class="pk-field">
             <label for="search" class="pk-label">Control Number</label>
             <div class="creq-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
                 <input type="text" id="search" name="search" class="pk-input" placeholder="BKG-..." value="{{ request('search') }}">
             </div>
-        </div>
-        <div class="pk-field">
-            <label for="status" class="pk-label">Status</label>
-            <select id="status" name="status" class="pk-input">
-                <option value="">All</option>
-                @foreach (['pending', 'approved', 'reserved', 'disapproved', 'cancelled'] as $st)
-                    <option value="{{ $st }}" {{ request('status') === $st ? 'selected' : '' }}>{{ ucfirst($st) }}</option>
-                @endforeach
-            </select>
         </div>
         <div class="pk-field">
             <label for="activity_date" class="pk-label">Activity Date</label>

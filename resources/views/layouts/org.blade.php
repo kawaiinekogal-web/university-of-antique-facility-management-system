@@ -25,10 +25,9 @@
             ],
         ],
         [
-            'heading' => 'Requests & support',
+            'heading' => 'Requests',
             'links' => [
-                ['label' => 'My requests', 'route' => 'org.requests.facilities.index', 'routes' => 'org.requests.facilities.*', 'icon' => 'inbox'],
-                ['label' => 'New request', 'route' => 'org.requests.facilities.create', 'routes' => 'org.requests.facilities.create', 'icon' => 'file-plus'],
+                ['label' => 'Facility requests', 'route' => 'org.requests.facilities.index', 'routes' => ['org.requests.facilities.index', 'org.requests.facilities.create', 'org.requests.facilities.store', 'org.requests.facilities.show', 'org.requests.facilities.cancel'], 'icon' => 'inbox'],
             ],
         ],
         [

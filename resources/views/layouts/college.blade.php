@@ -25,11 +25,10 @@
             ],
         ],
         [
-            'heading' => 'Requests & support',
+            'heading' => 'Requests',
             'links' => [
-                ['label' => 'My requests', 'route' => 'college.requests.index', 'routes' => 'college.requests.*', 'icon' => 'inbox'],
-                ['label' => 'New request', 'route' => 'college.requests.facilities.create', 'routes' => 'college.requests.facilities.create', 'icon' => 'file-plus'],
-                ['label' => 'Repair & maintenance', 'route' => 'college.maintenance-tickets.index', 'routes' => 'college.maintenance-tickets.*', 'icon' => 'wrench'],
+                ['label' => 'Facility requests', 'route' => 'college.requests.index', 'routes' => ['college.requests.index', 'college.requests.facilities.create', 'college.requests.facilities.store', 'college.requests.facilities.show', 'college.requests.facilities.cancel'], 'icon' => 'inbox'],
+                ['label' => 'Repair requests', 'route' => 'college.maintenance-tickets.index', 'routes' => ['college.maintenance-tickets.index', 'college.maintenance-tickets.completed', 'college.maintenance-tickets.create', 'college.maintenance-tickets.store', 'college.maintenance-tickets.show', 'college.maintenance-tickets.messages', 'college.maintenance-tickets.messages.store'], 'icon' => 'wrench'],
             ],
         ],
         [

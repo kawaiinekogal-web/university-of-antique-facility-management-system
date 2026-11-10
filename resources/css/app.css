@@ -2227,16 +2227,7 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 }
 
 /* ── admin/bookings/index.blade.php ── */
-.rsv-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-.rsv-tab {
-    display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid #E2E8F0;
-    background: #fff; color: #475569 !important; font-size: 13px; font-weight: 600; text-decoration: none !important;
-    transition: background .18s ease, color .18s ease, border-color .18s ease;
-}
-.rsv-tab:hover { border-color: #94A3B8; color: #0f172a !important; }
-.rsv-tab.is-active { background: #0f172a; border-color: #0f172a; color: #fff !important; }
-
-.rsv-filter { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 24px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
+.rsv-filter { display: grid; grid-template-columns: 1.4fr repeat(2, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 24px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
 .rsv-filter-actions { display: flex; gap: 8px; }
 .rsv-search { position: relative; }
 .rsv-search svg { position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: #94A3B8; pointer-events: none; }
@@ -2731,18 +2722,23 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 .fac-inactive { opacity: .72; }
 
 /* ── admin/forms/facilities_index.blade.php ── */
-.appr-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.appr-tabs, .creq-tabs, .rsv-tabs, .crsv-tabs {
+    display: flex; flex-wrap: wrap; margin-bottom: 18px; padding: 8px 12px 0;
+    border-bottom: 2px solid #E2E8F0; background: #fff;
+}
 /* Second line under a table cell value: control no. under the ticket code, payment step under the status */
 .appr-sub { display: block; margin-top: 4px; font-size: 12px; font-weight: 500; color: #64748B; white-space: nowrap; }
-.appr-tab {
-    display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid #E2E8F0;
-    background: #fff; color: #475569 !important; font-size: 13px; font-weight: 600; text-decoration: none !important;
+.appr-tab, .creq-tab, .rsv-tab, .crsv-tab {
+    display: inline-flex; flex: 1 0 auto; align-items: center; justify-content: center; min-height: 56px; padding: 14px 18px;
+    border: 0; border-bottom: 4px solid transparent; margin-bottom: -2px; border-radius: 0;
+    background: transparent; color: #64748B !important; font-size: 16px; font-weight: 750; white-space: nowrap; text-decoration: none !important;
     transition: background .18s ease, color .18s ease, border-color .18s ease;
 }
-.appr-tab:hover { border-color: #94A3B8; color: #0f172a !important; }
-.appr-tab.is-active { background: #0f172a; border-color: #0f172a; color: #fff !important; }
+.appr-tab:hover, .creq-tab:hover, .rsv-tab:hover, .crsv-tab:hover { color: #0f172a !important; background: #F8FAFC; }
+.appr-tab.is-active, .creq-tab.is-active, .rsv-tab.is-active, .crsv-tab.is-active { border-bottom-color: #0f172a; color: #0f172a !important; }
+.appr-tab:focus-visible, .creq-tab:focus-visible, .rsv-tab:focus-visible, .crsv-tab:focus-visible { outline: 3px solid #93C5FD; outline-offset: -3px; }
 
-.appr-filter { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 24px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
+.appr-filter { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 24px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
 .appr-filter-actions { display: flex; gap: 8px; }
 .appr-search { position: relative; }
 .appr-search svg { position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: #94A3B8; pointer-events: none; }
@@ -3288,15 +3284,7 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 .ccal-ours svg { width: 11px; height: 11px; }
 
 /* ── college/bookings/index.blade.php ── */
-.crsv-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-.crsv-tab {
-    display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid #E2E8F0;
-    background: #fff; color: #475569 !important; font-size: 13px; font-weight: 600; text-decoration: none !important;
-    transition: background .18s ease, color .18s ease, border-color .18s ease;
-}
-.crsv-tab:hover { border-color: #94A3B8; color: #0f172a !important; }
-.crsv-tab.is-active { background: #0f172a; border-color: #0f172a; color: #fff !important; }
-.crsv-filter { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 28px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
+.crsv-filter { display: grid; grid-template-columns: 1.4fr repeat(2, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 28px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
 .crsv-filter-actions { display: flex; gap: 8px; }
 .crsv-search { position: relative; }
 .crsv-search svg { position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: #94A3B8; pointer-events: none; }
@@ -3784,19 +3772,17 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 @media (max-width: 760px) { .nreq-uploads { grid-template-columns: minmax(0, 1fr); } }
 
 /* ── college/requests/facilities_index.blade.php ── */
-.creq-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-.creq-tab {
-    display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid #E2E8F0;
-    background: #fff; color: #475569 !important; font-size: 13px; font-weight: 600; text-decoration: none !important;
-    transition: background .18s ease, color .18s ease, border-color .18s ease;
-}
-.creq-tab:hover { border-color: #94A3B8; color: #0f172a !important; }
-.creq-tab.is-active { background: #0f172a; border-color: #0f172a; color: #fff !important; }
-.creq-filter { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 26px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
+.creq-tabs--views .creq-tab { flex: 1 1 50%; }
+.creq-filter { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 26px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
 .creq-filter-actions { display: flex; gap: 8px; }
 .creq-search { position: relative; }
 .creq-search svg { position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: #94A3B8; pointer-events: none; }
 .creq-search .pk-input { padding-left: 36px; }
+
+@media (max-width: 640px) {
+    .appr-tabs, .creq-tabs, .rsv-tabs, .crsv-tabs { padding-inline: 4px; }
+    .appr-tab, .creq-tab, .rsv-tab, .crsv-tab { min-height: 52px; padding-inline: 14px; font-size: 14px; }
+}
 
 /* Request cards */
 .creq-list { display: grid; gap: 12px; }
@@ -3859,15 +3845,7 @@ textarea.pk-input { height: auto; min-height: 110px; padding: 10px 12px; line-he
 .ocal-venues { margin: 0; font-size: 12px; color: #64748B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── guest/bookings/index.blade.php ── */
-.crsv-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-.crsv-tab {
-    display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid #E2E8F0;
-    background: #fff; color: #475569 !important; font-size: 13px; font-weight: 600; text-decoration: none !important;
-    transition: background .18s ease, color .18s ease, border-color .18s ease;
-}
-.crsv-tab:hover { border-color: #94A3B8; color: #0f172a !important; }
-.crsv-tab.is-active { background: #0f172a; border-color: #0f172a; color: #fff !important; }
-.crsv-filter { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 28px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
+.crsv-filter { display: grid; grid-template-columns: 1.4fr repeat(2, minmax(0, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 28px; padding: 18px 20px; border-radius: 14px; border: 1px solid #E2E8F0; background: #F8FAFC; }
 .crsv-filter-actions { display: flex; gap: 8px; }
 .crsv-search { position: relative; }
 .crsv-search svg { position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: #94A3B8; pointer-events: none; }

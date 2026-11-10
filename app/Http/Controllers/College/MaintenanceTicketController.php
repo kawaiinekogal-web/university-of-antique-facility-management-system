@@ -16,19 +16,42 @@ class MaintenanceTicketController extends Controller
 {
     use HandlesTicketMessages;
 
+    private const COMPLETED_STATUSES = ['success', 'replacement', 'failed', 'completed', 'rejected'];
+
     public function __construct(protected NotificationService $notifications)
     {
     }
 
     public function index()
     {
-        // Repair tickets are shared within the college: everyone sees the team's tickets
-        $tickets = MaintenanceTicket::with(['facility', 'requester'])
-            ->whereIn('requester_id', auth()->user()->collegeTeamIds())
-            ->latest()
-            ->paginate(15);
+        return $this->ticketList(false);
+    }
 
-        return view('college.maintenance-tickets.index', compact('tickets'));
+    public function completed()
+    {
+        return $this->ticketList(true);
+    }
+
+    private function ticketList(bool $completed)
+    {
+        // Repair tickets are shared within the college: everyone sees the team's tickets
+        $query = MaintenanceTicket::with(['facility', 'requester'])
+            ->whereIn('requester_id', auth()->user()->collegeTeamIds());
+
+        if ($completed) {
+            $query->whereIn('status', self::COMPLETED_STATUSES)
+                ->latest('completed_at');
+        } else {
+            $query->whereNotIn('status', self::COMPLETED_STATUSES)
+                ->latest();
+        }
+
+        $tickets = $query->paginate(15);
+
+        return view('college.maintenance-tickets.index', [
+            'tickets' => $tickets,
+            'showCompleted' => $completed,
+        ]);
     }
 
     public function create()

@@ -16,15 +16,14 @@
             'heading' => 'Bookings',
             'links' => [
                 ['label' => 'Reservation calendar', 'route' => 'admin.calendar', 'icon' => 'calendar'],
-                ['label' => 'Reservations', 'route' => 'admin.bookings.index', 'routes' => ['admin.bookings.*'], 'icon' => 'bookmark'],
-                ['label' => 'Create direct reservation', 'route' => 'admin.bookings.create-direct', 'routes' => ['admin.bookings.create-direct'], 'icon' => 'edit'],
+                ['label' => 'Reservations', 'route' => 'admin.bookings.index', 'routes' => ['admin.bookings.index', 'admin.bookings.edit', 'admin.bookings.update', 'admin.bookings.cancel', 'admin.bookings.create-direct'], 'icon' => 'bookmark'],
             ],
         ],
         [
-            'heading' => 'Requests & support',
+            'heading' => 'Requests',
             'links' => [
-                ['label' => 'All requests', 'route' => 'admin.forms.facilities.index', 'routes' => 'admin.forms.facilities.*', 'icon' => 'approve'],
-                ['label' => 'Repair & maintenance', 'route' => 'admin.maintenance-tickets.index', 'routes' => 'admin.maintenance-tickets.*', 'icon' => 'wrench'],
+                ['label' => 'Facility requests', 'route' => 'admin.forms.facilities.index', 'routes' => ['admin.forms.facilities.index', 'admin.forms.facilities.show', 'admin.forms.facilities.approve', 'admin.forms.facilities.disapprove', 'admin.forms.facilities.verify-payment', 'admin.forms.facilities.set-reservation', 'admin.forms.facilities.pdf'], 'icon' => 'approve'],
+                ['label' => 'Repair requests', 'route' => 'admin.maintenance-tickets.index', 'routes' => ['admin.maintenance-tickets.index', 'admin.maintenance-tickets.completed', 'admin.maintenance-tickets.show', 'admin.maintenance-tickets.update', 'admin.maintenance-tickets.messages', 'admin.maintenance-tickets.messages.store'], 'icon' => 'wrench'],
             ],
         ],
         [
@@ -51,7 +50,7 @@
     ];
     // Facility and repair staff use the same shell with only the links their routes allow (see routes/web.php groups)
     $shellRole   = auth()->user()?->role;
-    $repairLinks = ['admin.dashboard', 'admin.repair-records.index', 'admin.maintenance-tickets.index'];
+    $repairLinks = ['admin.dashboard', 'admin.repair-records.index', 'admin.maintenance-tickets.index', 'admin.maintenance-tickets.completed'];
     $adminOnly   = ['admin.users.index', 'admin.users.create', 'admin.audit-logs.index'];
     $allowed = match ($shellRole) {
         'maintenance_staff' => fn ($route) => in_array($route, $repairLinks, true),

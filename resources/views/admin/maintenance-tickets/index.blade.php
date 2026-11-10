@@ -13,6 +13,7 @@
     $initialsOf = fn ($name) => collect(preg_split('/\s+/', trim((string) $name)))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('') ?: '?';
     $openCount = $activeTickets->total();
     $doneCount = $completedTickets->total();
+    $tickets = $showCompleted ? $completedTickets : $activeTickets;
 @endphp
 
 <div class="pk-page">
@@ -22,10 +23,15 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>
                 Requests
             </p>
-            <h1>Repair &amp; maintenance</h1>
-            <p class="pk-hero-sub">Review college requests and update their progress.</p>
+            <h1>{{ $showCompleted ? 'Completed repair tasks' : 'Open repair requests' }}</h1>
+            <p class="pk-hero-sub">{{ $showCompleted ? 'Review completed repair and maintenance work.' : 'Review college requests and update their progress.' }}</p>
         </div>
     </section>
+
+    <nav class="creq-tabs creq-tabs--views" aria-label="Repair request views">
+        <a href="{{ route('admin.maintenance-tickets.index') }}" class="creq-tab {{ !$showCompleted ? 'is-active' : '' }}" @if (!$showCompleted) aria-current="page" @endif>Open repair requests</a>
+        <a href="{{ route('admin.maintenance-tickets.completed') }}" class="creq-tab {{ $showCompleted ? 'is-active' : '' }}" @if ($showCompleted) aria-current="page" @endif>Completed repair tasks</a>
+    </nav>
 
     <section class="pk-stats is-3" aria-label="Ticket summary">
         <div class="pk-stat is-dark">
@@ -54,6 +60,7 @@
         </div>
     </section>
 
+    @if (!$showCompleted)
     <section class="mt-section">
         <div class="pk-section-head">
             <h2 class="pk-section-title">Open requests</h2>
@@ -101,7 +108,7 @@
             </div>
         @endif
     </section>
-
+    @else
     <section class="mt-section is-done">
         <div class="pk-section-head">
             <h2 class="pk-section-title">Completed tasks</h2>
@@ -148,5 +155,6 @@
             </div>
         @endif
     </section>
+    @endif
 </div>
 @endsection

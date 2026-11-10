@@ -41,20 +41,15 @@
 
     <!-- Filter Form -->
     <form method="GET" action="{{ route('college.bookings.index') }}" class="crsv-filter">
+        @if ($currentStatus !== '')
+            <input type="hidden" name="status" value="{{ $currentStatus }}">
+        @endif
         <div class="pk-field">
             <label for="search" class="pk-label">Search</label>
             <div class="crsv-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
                 <input type="text" id="search" name="search" class="pk-input" placeholder="Facility or purpose..." value="{{ request('search') }}" />
             </div>
-        </div>
-        <div class="pk-field">
-            <label for="status" class="pk-label">Status</label>
-            <select id="status" name="status" class="pk-input">
-                <option value="">All Statuses</option>
-                <option value="reserved" {{ request('status') === 'reserved' ? 'selected' : '' }}>Reserved</option>
-                <option value="rescheduled" {{ request('status') === 'rescheduled' ? 'selected' : '' }}>Rescheduled</option>
-            </select>
         </div>
         <div class="pk-field">
             <label for="facility_id" class="pk-label">Facility</label>

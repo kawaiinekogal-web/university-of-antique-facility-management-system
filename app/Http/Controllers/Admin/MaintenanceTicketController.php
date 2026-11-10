@@ -16,7 +16,7 @@ class MaintenanceTicketController extends Controller
 
     private const ACTIVE_STATUSES = ['notified', 'pending', 'ongoing'];
 
-    private const COMPLETED_STATUSES = ['success', 'failed'];
+    private const COMPLETED_STATUSES = ['success', 'replacement', 'failed', 'completed', 'rejected'];
 
     public function __construct(protected NotificationService $notifications)
     {
@@ -25,7 +25,7 @@ class MaintenanceTicketController extends Controller
     public function index()
     {
         $activeTickets = MaintenanceTicket::with(['requester', 'facility'])
-            ->whereIn('status', self::ACTIVE_STATUSES)
+            ->whereNotIn('status', self::COMPLETED_STATUSES)
             ->latest()
             ->paginate(15, ['*'], 'active_page');
 
@@ -34,7 +34,30 @@ class MaintenanceTicketController extends Controller
             ->latest('completed_at')
             ->paginate(15, ['*'], 'completed_page');
 
-        return view('admin.maintenance-tickets.index', compact('activeTickets', 'completedTickets'));
+        return view('admin.maintenance-tickets.index', [
+            'activeTickets' => $activeTickets,
+            'completedTickets' => $completedTickets,
+            'showCompleted' => false,
+        ]);
+    }
+
+    public function completed()
+    {
+        $activeTickets = MaintenanceTicket::with(['requester', 'facility'])
+            ->whereNotIn('status', self::COMPLETED_STATUSES)
+            ->latest()
+            ->paginate(15, ['*'], 'active_page');
+
+        $completedTickets = MaintenanceTicket::with(['requester', 'facility'])
+            ->whereIn('status', self::COMPLETED_STATUSES)
+            ->latest('completed_at')
+            ->paginate(15, ['*'], 'completed_page');
+
+        return view('admin.maintenance-tickets.index', [
+            'activeTickets' => $activeTickets,
+            'completedTickets' => $completedTickets,
+            'showCompleted' => true,
+        ]);
     }
 
     public function show(MaintenanceTicket $ticket)

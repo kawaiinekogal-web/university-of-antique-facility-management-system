@@ -99,6 +99,8 @@ Route::middleware(['auth', 'role:admin,facility_staff,maintenance_staff'])->grou
 Route::middleware(['auth', 'role:admin,maintenance_staff'])->group(function () {
     Route::get('/admin/maintenance-tickets', [\App\Http\Controllers\Admin\MaintenanceTicketController::class, 'index'])
         ->name('admin.maintenance-tickets.index');
+    Route::get('/admin/maintenance-tickets/completed', [\App\Http\Controllers\Admin\MaintenanceTicketController::class, 'completed'])
+        ->name('admin.maintenance-tickets.completed');
     Route::get('/admin/maintenance-tickets/{ticket}', [\App\Http\Controllers\Admin\MaintenanceTicketController::class, 'show'])
         ->name('admin.maintenance-tickets.show');
     Route::put('/admin/maintenance-tickets/{ticket}', [\App\Http\Controllers\Admin\MaintenanceTicketController::class, 'update'])
@@ -201,6 +203,8 @@ Route::middleware(['auth', 'role:college_staff'])->group(function () {
 
     Route::get('/college/maintenance-requests', [\App\Http\Controllers\College\MaintenanceTicketController::class, 'index'])
         ->name('college.maintenance-tickets.index');
+    Route::get('/college/maintenance-requests/completed', [\App\Http\Controllers\College\MaintenanceTicketController::class, 'completed'])
+        ->name('college.maintenance-tickets.completed');
     Route::get('/college/maintenance-requests/create', [\App\Http\Controllers\College\MaintenanceTicketController::class, 'create'])
         ->name('college.maintenance-tickets.create');
     Route::post('/college/maintenance-requests', [\App\Http\Controllers\College\MaintenanceTicketController::class, 'store'])

@@ -10,6 +10,7 @@
         'replacement', 'failed', 'rejected' => 'is-bad',
         default => 'is-neutral',
     };
+    $closedStatuses = ['success', 'replacement', 'failed', 'completed', 'rejected'];
 @endphp
 
 <div class="pk-page">
@@ -19,31 +20,38 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4 2.5-2.5z"/></svg>
                 Repair &amp; maintenance
             </p>
-            <h1>Repair &amp; maintenance requests</h1>
-            <p class="pk-hero-sub">Track your college's repair requests to the administrators. Everyone in your college sees these tickets.</p>
+            <h1>{{ $showCompleted ? 'Completed repair tasks' : 'Open repair requests' }}</h1>
+            <p class="pk-hero-sub">{{ $showCompleted ? 'Review completed repair and maintenance work for your college.' : "Track your college's open repair requests to the administrators. Everyone in your college sees these tickets." }}</p>
         </div>
         <div class="pk-hero-actions">
             <div class="pk-stat is-dark pk-stat--glass pk-stat--hero u-minw-140">
                 <div>
-                    <p class="pk-stat-label u-mb-6">Tickets sent</p>
+                    <p class="pk-stat-label u-mb-6">{{ $showCompleted ? 'Completed tasks' : 'Open requests' }}</p>
                     <p class="pk-stat-value">{{ $tickets->total() }}</p>
                 </div>
             </div>
+            @unless ($showCompleted)
             <a href="{{ route('college.maintenance-tickets.create') }}" class="pk-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                 New request
             </a>
+            @endunless
         </div>
     </section>
 
+    <nav class="creq-tabs creq-tabs--views" aria-label="Repair request views">
+        <a href="{{ route('college.maintenance-tickets.index') }}" class="creq-tab {{ !$showCompleted ? 'is-active' : '' }}" @if (!$showCompleted) aria-current="page" @endif>Open repair requests</a>
+        <a href="{{ route('college.maintenance-tickets.completed') }}" class="creq-tab {{ $showCompleted ? 'is-active' : '' }}" @if ($showCompleted) aria-current="page" @endif>Completed repair tasks</a>
+    </nav>
+
     @if ($tickets->isNotEmpty())
         <div class="pk-section-head">
-            <h2 class="pk-section-title">College tickets</h2>
+            <h2 class="pk-section-title">{{ $showCompleted ? 'Completed tasks' : 'Open requests' }}</h2>
             <span class="pk-section-meta">Showing {{ $tickets->firstItem() }}–{{ $tickets->lastItem() }} of {{ $tickets->total() }}</span>
         </div>
         <div class="ctk-grid">
             @foreach ($tickets as $ticket)
-                @php $closed = in_array($ticket->status, ['success', 'replacement', 'failed', 'completed', 'rejected'], true); @endphp
+                @php $closed = in_array($ticket->status, $closedStatuses, true); @endphp
                 <article class="ctk {{ $closed ? 'is-closed' : '' }}">
                     <div class="ctk-stub">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3a2 2 0 000-4z"/></svg>
@@ -72,9 +80,11 @@
     @else
         <div class="pk-empty">
             <span class="pk-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4 2.5-2.5z"/></svg></span>
-            <h3>No repair requests yet</h3>
-            <p>You have not sent any repair or maintenance requests.</p>
-            <a href="{{ route('college.maintenance-tickets.create') }}" class="pk-btn u-mt-6">Report a repair</a>
+            <h3>{{ $showCompleted ? 'No completed repair tasks yet' : 'No open repair requests' }}</h3>
+            <p>{{ $showCompleted ? 'Completed repair work for your college will show up here.' : 'You have no open repair or maintenance requests.' }}</p>
+            @unless ($showCompleted)
+                <a href="{{ route('college.maintenance-tickets.create') }}" class="pk-btn u-mt-6">Report a repair</a>
+            @endunless
         </div>
     @endif
 </div>

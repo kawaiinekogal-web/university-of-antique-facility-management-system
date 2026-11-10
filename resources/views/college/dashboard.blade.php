@@ -43,7 +43,7 @@
         <div class="pk-hero-actions">
             <a href="{{ route('college.requests.facilities.create') }}" class="pk-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                New request
+                New facility request
             </a>
             <a href="{{ route('college.calendar') }}" class="pk-btn-ghost">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
@@ -100,14 +100,6 @@
         <section class="cd-card" aria-label="Quick access">
             <div class="cd-card-head"><h3>Quick access</h3></div>
             <div class="cd-actions">
-                <a href="{{ route('college.requests.facilities.create') }}" class="cd-action">
-                    <span class="cd-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg></span>
-                    <span><strong>Utilization request</strong><span class="cd-action-sub">Submit a request to GSU</span></span>
-                </a>
-                <a href="{{ route('college.requests.index') }}" class="cd-action">
-                    <span class="cd-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span>
-                    <span><strong>My requests</strong><span class="cd-action-sub">Track request status</span></span>
-                </a>
                 <a href="{{ route('college.bookings.index') }}" class="cd-action">
                     <span class="cd-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></span>
                     <span><strong>Reservations</strong><span class="cd-action-sub">Your confirmed bookings</span></span>
